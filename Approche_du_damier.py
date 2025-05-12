@@ -6,6 +6,8 @@
 
 from math import *
 
+##Fonctions usuels
+
 def dist_O(n,M):
     """prend en entrée la taille du damier n un point M = (i,j) et renvoie la distance du point à l'origine""" 
     (i,j)=(M[0],M[1])
@@ -59,6 +61,18 @@ def moy_d_Or_parcours(l,n,precision=1000):
         S+=moy_d_Or(n,l[i],l[i+1],precision)
     return S/m
 
+def min_parc(l,n):
+    """prend une liste de parcours et n la taille du damier et renvoie le parcours avec la plus petite distance moyenne à l'origine"""
+    print("start")
+    Liste_moy_d_OR = [moy_d_Or_parcours(t,n,precision=100) for t in l]
+    j=0
+    n = len(l)
+    for i in range(n):
+        if Liste_moy_d_OR[j]>Liste_moy_d_OR[i]:
+            j=i
+            print(j)
+    return l[j]
+
 import matplotlib.pyplot as plt
 
 def visualisation(p,n):
@@ -77,15 +91,17 @@ def visualisation(p,n):
     plt.legend()
     plt.show()
 
-#L'objectif est maintenant de trouver un alogrithme qui génére des chemins d'une certaine longueur à +/- une erreur.
-
 def epsi(a,obj,e):
     """prend en entrée une valeur, un objectif et un réel epsilon et renvoie si la valeur est epsilon proche de la valeur objectif"""
     if obj-e<=a and a<=obj+e:
         return True
     else : return False
 
-## Pour cela on commence par créer un lacet autour de l'origine que l'on agrandi jusqu'à ce qu'il soit de longueur l. Ce lacet est par nature cyclique
+#L'objectif est maintenant de trouver un alogrithme qui génére des chemins d'une certaine longueur à +/- une erreur.
+# Pour cela on commence par créer un lacet autour de l'origine que l'on agrandi jusqu'à ce qu'il soit de longueur l. Ce lacet est par nature cyclique
+
+##Méthode du lacet
+
 from random import randrange
 
 def division(M,n):
@@ -133,13 +149,42 @@ def parcours_lacet(l,e,n):
         opé+=1
     return parc
 
-# Il est important de noté que pour l'instant cette algorithme comporte une grande portion d'aléatoire, il ne donc évidemment pas la solution optimale.
+# Il est important de noté que pour l'instant cette algorithme comporte une grande portion d'aléatoire, il ne donc évidemment pas la solution optimale
 
-#Cette fois on suppose que l'on peut uniquement se vers des intersections adjacente
+##Méthodes naïves 
 
+#A partir de maintenant et jusqu'à nouvel ordre on fera considère qu'on ne peut se déplacer que d'intersection adjacente en intersection adjacente.
+#On se donne aussi une autre règle à partir de maintenant : interdiction de repasser par le même point avec le même vecteur vitesse (dans nos hypothèse cela revient à ne pas arriver à un point sans venir du même point deux fois)
+
+#Dictionnaire contenant le meilleur chemin trouvé pour une clé [n,l] avec n la dimension et l la longueur du chemin
 Opti_chemin = {}
 
-#Cet algorithme fait du brute force, il y a sûrement un moyen de l'améliorer et de le rendre plus élégant
+#Initialisation du dictionnaire à partir d'un fichier texte.
+
+f=open('Opti_dico.txt','r')
+for ligne in f:
+    c=ligne.split(';')
+    simplify_char = "[()]"
+    for i in simplify_char:
+        c[2]= c[2].replace(i,"")
+    coords = c[2].split(',')
+
+    liste_points = []
+    for i in range(len(coords)):
+        if i%2==0:
+            liste_points.append((int(coords[i]),int(coords[i+1])))
+    
+    Opti_chemin[(int(c[0]),float(c[1]))]=(liste_points,float(c[3]))
+
+def save_dico():
+    """enregistre le dictionnaire Opti_chemin mentioné dans le script, qui garde en mémoire les chemins les plus optimisé (d'un point de vue de la distance moyenne à l'origine) de longueur l dans un damier de taille n"""
+    g=open('Opti_dico.txt','w')
+    for x in Opti_chemin:
+        g.write(f"{x[0]};{x[1]};{Opti_chemin[x][0]};{Opti_chemin[x][1]}"+"\n")
+
+
+
+# Ce premier algorithme réalise un chemin aléatoirement, si il est cyclique et est plus optimal que celui du dictionnaire alors il l'enregistre dans celui ci 
 def random_search(n,lngth):
     """enregistre dans un dictionnaire que tu peux acutalisé le meilleur parcours qu'il a trouvé pour une longueur n dans un damier de taille n, attention ici on ne s'autorise qu'à se déplacer vers des cases adjacentes"""
     #Ce première algorithme utilise encore de l'aléatoire ce qui ne garantit pas que la solution renvoyé soit optimal ou même qu'il renvoie une solution
@@ -174,18 +219,7 @@ def random_search(n,lngth):
         return f"Nous avons trouvé un nouveau chemin {Opti_chemin[(n,lngth)]}"
     else : return "Pas de nouveau chemin trouvé"
 
-
-def min_parc(l,n):
-    """prend une liste de parcours et n la taille du damier et renvoie le parcours avec la plus petite distance moyenne à l'origine"""
-    print("start")
-    Liste_moy_d_OR = [moy_d_Or_parcours(t,n,precision=100) for t in l]
-    j=0
-    n = len(l)
-    for i in range(n):
-        if Liste_moy_d_OR[j]>Liste_moy_d_OR[i]:
-            j=i
-            print(j)
-    return l[j]
+#Ce deuxième algorithme test exhaustivement tout les chemins cyclique possibles et renvoie celui qui est le plus optimal
 
 def brute_search_aux(n,parc,vitesse,lngth):
     m = len(parc)
@@ -237,30 +271,8 @@ def brute_search(n,lngth):
         Opti_chemin[(n,lngth)]=(min,min_moy)
 
 
-def save_dico():
-    """enregistre le dictionnaire Opti_chemin mentioné dans le script, qui garde en mémoire les chemins les plus optimisé (d'un point de vue de la distance moyenne à l'origine) de longueur l dans un damier de taille n"""
-    g=open('Opti_dico.txt','w')
-    for x in Opti_chemin:
-        g.write(f"{x[0]};{x[1]};{Opti_chemin[x][0]};{Opti_chemin[x][1]}"+"\n")
-
-#Essayons d'amélirorer la compléxité de brute_search
 
 
 
 
-#Initialisation du dictionnaire à partir d'un fichier texte.
 
-f=open('Opti_dico.txt','r')
-for ligne in f:
-    c=ligne.split(';')
-    simplify_char = "[()]"
-    for i in simplify_char:
-        c[2]= c[2].replace(i,"")
-    coords = c[2].split(',')
-
-    liste_points = []
-    for i in range(len(coords)):
-        if i%2==0:
-            liste_points.append((int(coords[i]),int(coords[i+1])))
-    
-    Opti_chemin[(int(c[0]),float(c[1]))]=(liste_points,float(c[3]))
