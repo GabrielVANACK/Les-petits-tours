@@ -1,6 +1,8 @@
 import math as math
 import cmath as cmath
 
+##Fonctions usuels
+
 #Dans un premier temps on souhaite tracer la courbe par interpolation de Lagrange, pour éviter les figures absurdes on souhaite que la dérivée de la courbe de tracée soit bornée entre des valeurs connu au préalable.
 
 def epsi(a,obj,e):
@@ -36,6 +38,68 @@ def Prod_poly(P,Q):
             result[i + j] += P[i] * Q[j]
     return result
 
+def Poly_fun(P):
+    """prend la liste des coefficients en entrée en renvoie la fonction polynomiale"""
+    n =len(P)
+    
+    def Pol(a):
+        S=0
+        for i in range(n):
+            S += P[i]*(a**i)
+        return S
+    return Pol
+
+#On représente les matrices par un tableau de leur coefficients
+
+def Prod_mat(A,B):
+    """ prend les matrices A,B en entrée et renvoie le produit matrcielle AB, print un message d'erreur dans le terminal si toutefois les tailles de matrices ne sont pas compatibles """
+    (n,p) = (len(A),len(A[0]))
+    (q,m) = (len(B), len(B[0]))
+    if p==q: 
+        M = [[0 for _ in range(n)] for _ in range(m)]
+        for i in range(n):
+            for j in range(m):
+                S=0
+                for k in range(p):
+                    S+= A[i][k]*B[k][j]
+                M[i][j] = S
+        return M
+    else : raise ValueError("les tailles des matrices ne sont pas compatibles")
+
+#WIP
+def Inversion_mat(A):
+    """Inverse une matrice carrée A en utilisant la méthode de Gauss-Jordan."""
+    n = len(A)
+    # Vérification si la matrice est carrée
+    if any(len(row) != n for row in A):
+        raise ValueError("La matrice doit être carrée pour être inversée.")
+    
+    # Création de la matrice augmentée [A | I]
+    I = [[1 if i == j else 0 for j in range(n)] for i in range(n)]
+    tab = [A[i] + I[i] for i in range(n)]
+    
+    # Réduction de la matrice augmentée
+    for i in range(n):
+        # Recherche du pivot
+        pivot = tab[i][i]
+        if pivot == 0:
+            raise ValueError("La matrice ne peut pas être inversée.")
+        
+        # Normalisation de la ligne du pivot
+        tab[i] = [x / pivot for x in tab[i]]
+        
+        # Élimination des autres lignes
+        for j in range(n):
+            if i != j:
+                factor = tab[j][i]
+                tab[j] = [tab[j][k] - factor * tab[i][k] for k in range(2 * n)]
+    
+    # Extraction de la matrice inverse (partie droite de la matrice augmentée)
+    inverse = [row[n:] for row in tab]
+    return inverse
+    
+##Interpolation de lagrange
+
 def Poly_de_Lag(l):
     """définit les polynômes de lagrange d'une liste l de points"""
     n = len(l)
@@ -60,18 +124,40 @@ def Interpolation_Lagrange(l):
         IL.append(a)
     return IL
 
-def Poly_fun(P):
-    """prend la liste des coefficients en entrée en renvoie la fonction polynomiale"""
-    n =len(P)
+##Interpolation par splines
+
+#WIP
+def Interpolation_splines(l):
+    """prends une liste de points du plan complexe en entrée et renvoie sa fonction d'interpolation par des splines"""
+    #Pour l'instant c'est du code retranscrit de https://fr.wikipedia.org/wiki/Spline
+    n = len(l)
+    h = [l[i+1][0]-l[i][0] for i in range(0,n-1)]
+    F = [0] + [(l[i+1][1]-l[i][1])/(h[i]) - (l[i][0]-l[i-1][0])/(h[i-1]) for i in range(1,n-1)]+[0]
+    R = [[0 for _ in range(n)] for _ in range(n)]
+    R[1][1]=1
+    R[n-1][n-1]=1
+    for i in range(1,n-1):
+        R[i][i]=(h[i-1]-h[i])/3
+        R[i][i+1]=h[i]/6
+        R[i][i-1]=h[i-1]/6
+    M = Prod_mat(Inversion_mat(R),F)
+    C1 = [0 for _ in range(n-1)]
+    C2 = [0 for _ in range(n-1)]
+    for i in range(n-1):
+        C1[i]= (l[i+1][1]-l[i][1])/h[i] -h[i]*(M[0][i+1]-M[0][i])/6
+        C2[i]=l[i][1]-(M[0][i]*(h[i])**2)/2
+
+    def fun(x):
+        if l[0][0]>=x>=l[n-1][0]:
+            for i in range(n-1):
+                if l[i+1][0]>=x>=l[i][0]:
+                    return (M[i]/(6*h[i]))*(l[i+1][0]-x)**3+(M[i+1]/(6*h[i]))*(x-l[i][0])**3 + C1[i](x-l[i][0]) +C2[i]
+
+        else : ValueError(f"fonction non définie pour x = {x}")
+    return fun
     
-    def Pol(a):
-        S=0
-        for i in range(n):
-            S += P[i]*(a**i)
-        return S
-    return Pol
-    
-            
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
