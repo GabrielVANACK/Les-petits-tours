@@ -66,8 +66,8 @@ def Prod_mat(A,B):
         return M
     else : raise ValueError("les tailles des matrices ne sont pas compatibles")
 
-#WIP
 def Inversion_mat(A):
+    #BY Chat GPT
     """Inverse une matrice carrée A en utilisant la méthode de Gauss-Jordan."""
     n = len(A)
     # Vérification si la matrice est carrée
@@ -156,8 +156,6 @@ def Interpolation_splines(l):
         else : ValueError(f"fonction non définie pour x = {x}")
     return fun
     
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
