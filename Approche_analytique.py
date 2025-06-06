@@ -56,7 +56,7 @@ def Prod_mat(A,B):
     (n,p) = (len(A),len(A[0]))
     (q,m) = (len(B), len(B[0]))
     if p==q: 
-        M = [[0 for _ in range(n)] for _ in range(m)]
+        M = [[0 for j in range(m)] for i in range(n)]
         for i in range(n):
             for j in range(m):
                 S=0
@@ -126,34 +126,34 @@ def Interpolation_Lagrange(l):
 
 ##Interpolation par splines
 
-#WIP
+#A tester
 def Interpolation_splines(l):
     """prends une liste de points du plan complexe en entrée et renvoie sa fonction d'interpolation par des splines"""
     #Pour l'instant c'est du code retranscrit de https://fr.wikipedia.org/wiki/Spline
     n = len(l)
     h = [l[i+1][0]-l[i][0] for i in range(0,n-1)]
-    F = [0] + [(l[i+1][1]-l[i][1])/(h[i]) - (l[i][0]-l[i-1][0])/(h[i-1]) for i in range(1,n-1)]+[0]
-    R = [[0 for _ in range(n)] for _ in range(n)]
-    R[1][1]=1
+    F = [[0]] + [[(l[i+1][1]-l[i][1])/(h[i]) - (l[i][0]-l[i-1][0])/(h[i-1])] for i in range(1,n-1)]+[[0]]
+    R = [[0 for i in range(n)] for j in range(n)]
+    R[0][0]=1
     R[n-1][n-1]=1
     for i in range(1,n-1):
-        R[i][i]=(h[i-1]-h[i])/3
+        R[i][i]=(h[i-1]+h[i])/3
         R[i][i+1]=h[i]/6
         R[i][i-1]=h[i-1]/6
     M = Prod_mat(Inversion_mat(R),F)
     C1 = [0 for _ in range(n-1)]
     C2 = [0 for _ in range(n-1)]
     for i in range(n-1):
-        C1[i]= (l[i+1][1]-l[i][1])/h[i] -h[i]*(M[0][i+1]-M[0][i])/6
-        C2[i]=l[i][1]-(M[0][i]*(h[i])**2)/2
+        C1[i]= (l[i+1][1]-l[i][1])/h[i] -h[i]*(M[i+1][0]-M[i][0])/6
+        C2[i]=l[i][1]-(M[i][0]*(h[i])**2)/2
 
     def fun(x):
-        if l[0][0]>=x>=l[n-1][0]:
+        if l[0][0]<=x<=l[n-1][0]:
             for i in range(n-1):
                 if l[i+1][0]>=x>=l[i][0]:
-                    return (M[i]/(6*h[i]))*(l[i+1][0]-x)**3+(M[i+1]/(6*h[i]))*(x-l[i][0])**3 + C1[i](x-l[i][0]) +C2[i]
+                    return (M[i][0]/(6*h[i]))*(l[i+1][0]-x)**3+(M[i+1][0]/(6*h[i]))*(x-l[i][0])**3 + C1[i]*(x-l[i][0]) +C2[i]
 
-        else : ValueError(f"fonction non définie pour x = {x}")
+        else : return 0 #Dans le cadre du problème il me semble faire sens d'attribuer à une fonction la valeur lorsqu'elle n'est pas défini (pour garantir le bon fonctionnement de C_graph)
     return fun
     
 import numpy as np
@@ -162,11 +162,12 @@ from matplotlib.colors import ListedColormap
 
 
 def Graph_C(f,view,Inter):
+    """prend en entrée un fonction f, view qui est la vue du plan complexe disponible sur le graph renvoyée et Inter un intervalle centrée en 0 sur lequel f est calculé; renvoie un graph. """
     #En premier lieu on construit un intervalle de points
     I= np.linspace(10*view,-10*view,num= 100*view)
     a = len(I)
 
-    #On initialise I2 qui est I mais étiré en fonction de la dérivé de f, pour que les points ne soient pas trop espacé ou trop rapproché
+    #On initialise I2 qui est Inter mais étiré, pour que les points ne soient pas trop espacé ou trop rapproché
     I2 = np.linspace(Inter,-Inter,num= 10*Inter*view)
     b=len(I2)
     #Ensuite on calcule les valeurs de la fonction au valeurs enregistrée dans I'
