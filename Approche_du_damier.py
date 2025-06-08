@@ -270,7 +270,49 @@ def brute_search(n,lngth):
         print("succés")
         Opti_chemin[(n,lngth)]=(min,min_moy)
 
+#Par DFS, selon un article de Christine Solon on peut trouver les cycles d'un graphes à partir d'un DFS.
+#WIP
+#Marche pas pour l'instant
+def cycle_BFS(n,source,l):
+    """enregistre dans un dictionnaire que tu peux acutalisé le meilleur parcours qu'il a trouvé pour une longueur l dans un damier de taille n, attention ici on ne s'autorise qu'à se déplacer vers des cases adjacentes (diagonales exclus) """
+    cycle =[]
+    trajets = [(source,(0,0))]
+    pile  =[trajets]
+    while pile != []:
+        t = pile.pop()
+        lnght = len(t)
+        M = t[lnght-1][0]
+        V = [(M[0]+1,M[1]),(M[0]-1,M[1]),(M[0],M[1]-1),(M[0],M[1]+1)]
+        if est_cyclique(t) and lnght==l:
+            cycle.append(t)
+        elif lnght < l :
+            for v in V:
+                if 0<=v[0]<=n and 0<=v[1]<=n:
 
+                    new_traj = t + [(v,(v[0]-M[0],v[1]-M[1]))]
+                    if new_traj not in trajets : 
+                        trajets.append(new_traj)
+                        pile.append(new_traj)
+    return cycle
+
+def opti_BFS(n,l):
+    cycles = []
+    for x in range(int((n+1)/2)+1): #Ce problème est cconstant par symétrie centrale, trouver la solution optimal pour M (point de dépar) dans un quart de damier revient à la trouver quelque soit M
+        for y in range(int((n+1)/2)+1):
+            cycles += cycle_BFS(n,(x,y),l)
+    min = min_parc(cycles,n)
+    min_moy =moy_d_Or_parcours(min,n)
+    if (n,l) in Opti_chemin:
+        if min_moy<Opti_chemin[(n,l)][1]:
+            print("succés")
+            Opti_chemin[(n,l)]=(min,min_moy)
+        else : print("Un chemin plus efficaces a déjà été trouvé")
+    else : 
+        print("succés")
+        Opti_chemin[(n,l)]=(min,min_moy)
+
+#Après coup je ne suis pas sûr que cette technique nous fasse gagner face à Brute_search, à part de la simplicité d'écriture
+     
 
 
 

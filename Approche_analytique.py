@@ -125,11 +125,10 @@ def Interpolation_Lagrange(l):
     return IL
 
 ##Interpolation par splines
-
-#A tester
 def Interpolation_splines(l):
     """prends une liste de points du plan complexe en entrée et renvoie sa fonction d'interpolation par des splines"""
     #Pour l'instant c'est du code retranscrit de https://fr.wikipedia.org/wiki/Spline
+    #Ce premier algo fait donne fonctions qui ne sont absolument pas continue ce qui pose évidemment problème
     n = len(l)
     h = [l[i+1][0]-l[i][0] for i in range(0,n-1)]
     F = [[0]] + [[(l[i+1][1]-l[i][1])/(h[i]) - (l[i][0]-l[i-1][0])/(h[i-1])] for i in range(1,n-1)]+[[0]]
@@ -151,15 +150,27 @@ def Interpolation_splines(l):
         if l[0][0]<=x<=l[n-1][0]:
             for i in range(n-1):
                 if l[i+1][0]>=x>=l[i][0]:
-                    return (M[i][0]/(6*h[i]))*(l[i+1][0]-x)**3+(M[i+1][0]/(6*h[i]))*(x-l[i][0])**3 + C1[i]*(x-l[i][0]) +C2[i]
+                    return (M[i][0]/(6*h[i]))*(l[i+1][0]-x)**3 + (M[i+1][0]/(6*h[i]))*(x-l[i][0])**3 + C1[i]*(x-l[i][0]) +C2[i]
 
         else : return 0 #Dans le cadre du problème il me semble faire sens d'attribuer à une fonction la valeur lorsqu'elle n'est pas défini (pour garantir le bon fonctionnement de C_graph)
     return fun
-    
+
+##Méthode du Lagrangien
+# On s'appuie ici sur cet article Wikipédia :https://fr.wikipedia.org/wiki/Multiplicateur_de_Lagrange
+
+#WIP
+def Lagrangien(phi,psi):
+    """ renvoie à le Lagrangien de la fonction phi suivant la condition psi"""
+    def L(lam,x):
+        return phi(x)-lam*psi(x)
+    return L
+
+#On suppose la différentiel de psi surjective en tout point
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-
 
 def Graph_C(f,view,Inter):
     """prend en entrée un fonction f, view qui est la vue du plan complexe disponible sur le graph renvoyée et Inter un intervalle centrée en 0 sur lequel f est calculé; renvoie un graph. """
@@ -210,5 +221,4 @@ def Graph_C(f,view,Inter):
     plt.show ()
 
 
-    
     
