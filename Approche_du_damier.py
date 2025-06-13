@@ -38,6 +38,24 @@ def moy_d_Or(n,M,P,precision=1000):
 #On note un parcours comme une liste de point par lequel on passe
 # On dira qu'un parcours est cylcique si le point d'arrivée est également celui de départ.
 
+def sans_repassage(l):
+    """assure qu'un chemin ne repasse pas deux fois par le même point avec le même vecteur vitesse"""
+    lngth = len(l)
+    liste_doublons=[[] for i in l]
+    for i in range(lngth):
+        for j in range(lngth):
+            if l[i]==l[j] and i!=j:
+                (liste_doublons[i]).append(j)
+    for a in range(lngth):
+        if a!=0:
+            v_a = (l[a][0]-l[a-1][0],l[a][1]-l[a-1][1]) 
+            for k in liste_doublons[a]:
+                if k!=0: 
+                    v_k = (l[k][0]-l[k-1][0],l[k][1]-l[k-1][1]) 
+                    if v_k == v_a:
+                        return False
+    #compléxité haute pour un algo simple comme ça je trouve
+
 def est_cyclique(l):
     """prend un parcours en entrée renvoie true si il est cyclique et false sinon"""
     n = len(l)
@@ -320,35 +338,46 @@ def opti_BFS(n,l):
 
 #Pour trouver les chemins cyclique minimisant le rayon d'un point M vers M on s'intéresse à trouvers celui minimisant le rayon d'un point adjacent de M : P vers les autres points adjacents
 
-#WIP
+#WIP, il marche vraiment pas du tout pour l'instant
 def cycle_rec(n,l):
     #On initialise "naïvement" Min_mat
     
     def constructeur(i,j):
         if 0<abs(i%n-j%n) + abs(i//n - j//n)<=l:
-            L = [(a,b) for a in range(min(i%n,j%n),max(i%n,j%n)+1) for b in range(min(i//n,j//n),max(i//n,j//n)+1)]
+            L = [(a,b) for a in range(min(i%n,j%n),max(i%n,j%n)+1) for b in range(min(i//n,j//n),max(i//n,j//n)+1)]#
             d_Or = moy_d_Or_parcours(L,n)
             return [L,d_Or,abs(i%n-j%n) + abs(i//n - j//n)]
         elif abs(i%n-j%n) + abs(i//n - j//n)==0:
-            return [[],n*(pi**2),0]
-        else : return [[],n*(pi**2),n*n] #valeurs absurde qui majorent ce que veut trouver
+            return [[(i%n,i//n)],pi*(n**2),1]
+        else : return [[(-1,-1)],pi*(n**2),n*n] #valeurs absurde qui majorent ce qu'on veut trouver
 
     #Description Min_mat ->
     Min_mat = [[ constructeur(i,j) for i in range(n*n)] for j in range(n*n) ]
 
-    #On applique Floy Warshall
+    #On applique Floyd Warshall
     for k in range(n*n):
         for i in range(n*n):
             for j in range(n*n):
-                if Min_mat[i][j][1]> Min_mat[i][k][1] + Min_mat[k][j][1] and Min_mat[i][k][2]+Min_mat[k][j][2]<=l:
-                    Min_mat[i][j] = [Min_mat[i][k][0]+Min_mat[k][j][0],Min_mat[i][k][1]+Min_mat[k][j][1],Min_mat[i][k][2]+Min_mat[k][j][2]]
-    
+                if epsi((Min_mat[i][k][2]+Min_mat[k][j][2]),l/(2**(n*n-k-1)),1): #je comprends pas ce qu'il ne va pas dans cette partie
+                    moy_somme_parcours = (Min_mat[i][k][2]*Min_mat[i][k][1] + Min_mat[k][j][2]*Min_mat[k][j][1])/(Min_mat[k][j][2]+Min_mat[i][k][2]) #formule probablement fausse
+                    if Min_mat[i][j][1]> moy_somme_parcours :
+                        Min_mat[i][j] = [Min_mat[i][k][0]+Min_mat[k][j][0],moy_somme_parcours,Min_mat[i][k][2]+Min_mat[k][j][2]]
+
     #Recherche du minimum de min_Mat
-    minimum = Min_mat[0][0]
-    for i in range(1,n*n):
-            if minimum[1]>Min_mat[i][i][1]:
-                minimum[1]=Min_mat[i][i][1]
+    minimum = [[],pi*n*n,0]
+    for i in range(n*n):
+            print(Min_mat[i][i])
+            if minimum[1]>Min_mat[i][i][1] and sans_repassage(Min_mat[i][i][0]):
+                minimum=Min_mat[i][i]
+
+    if (n,minimum[2]) in Opti_chemin:
+        if minimum[1]<Opti_chemin[(n,minimum[2])][1]:
+            print("succés")
+            Opti_chemin[(n,minimum[2])]=(minimum[0],minimum[1])
+        else : print("Un chemin plus efficaces a déjà été trouvé")
+    else : 
+        print("succés")
+        Opti_chemin[(n,minimum[2])]=(minimum[0],minimum[1])
+
     return minimum
 
-
-#Quand est ce que tu t'assures que le parcours boucle ou même qu'il est de bonne longueur?
