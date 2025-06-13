@@ -270,6 +270,8 @@ def brute_search(n,lngth):
         print("succés")
         Opti_chemin[(n,lngth)]=(min,min_moy)
 
+##DFS
+
 #Par DFS, selon un article de Christine Solon on peut trouver les cycles d'un graphes à partir d'un DFS.
 #WIP
 #Marche pas pour l'instant
@@ -311,10 +313,42 @@ def opti_BFS(n,l):
         print("succés")
         Opti_chemin[(n,l)]=(min,min_moy)
 
-#Après coup je ne suis pas sûr que cette technique nous fasse gagner face à Brute_search, à part de la simplicité d'écriture
-     
+#Après coup je ne suis pas sûr que cette technique nous fasse gagner grand chose face à Brute_search, à part de la simplicité d'écriture
+#A retravailler     
+
+##Récursion
+
+#Pour trouver les chemins cyclique minimisant le rayon d'un point M vers M on s'intéresse à trouvers celui minimisant le rayon d'un point adjacent de M : P vers les autres points adjacents
+
+#WIP
+def cycle_rec(n,l):
+    #On initialise "naïvement" Min_mat
+    
+    def constructeur(i,j):
+        if 0<abs(i%n-j%n) + abs(i//n - j//n)<=l:
+            L = [(a,b) for a in range(min(i%n,j%n),max(i%n,j%n)+1) for b in range(min(i//n,j//n),max(i//n,j//n)+1)]
+            d_Or = moy_d_Or_parcours(L,n)
+            return [L,d_Or,abs(i%n-j%n) + abs(i//n - j//n)]
+        elif abs(i%n-j%n) + abs(i//n - j//n)==0:
+            return [[],n*(pi**2),0]
+        else : return [[],n*(pi**2),n*n] #valeurs absurde qui majorent ce que veut trouver
+
+    #Description Min_mat ->
+    Min_mat = [[ constructeur(i,j) for i in range(n*n)] for j in range(n*n) ]
+
+    #On applique Floy Warshall
+    for k in range(n*n):
+        for i in range(n*n):
+            for j in range(n*n):
+                if Min_mat[i][j][1]> Min_mat[i][k][1] + Min_mat[k][j][1] and Min_mat[i][k][2]+Min_mat[k][j][2]<=l:
+                    Min_mat[i][j] = [Min_mat[i][k][0]+Min_mat[k][j][0],Min_mat[i][k][1]+Min_mat[k][j][1],Min_mat[i][k][2]+Min_mat[k][j][2]]
+    
+    #Recherche du minimum de min_Mat
+    minimum = Min_mat[0][0]
+    for i in range(1,n*n):
+            if minimum[1]>Min_mat[i][i][1]:
+                minimum[1]=Min_mat[i][i][1]
+    return minimum
 
 
-
-
-
+#Quand est ce que tu t'assures que le parcours boucle ou même qu'il est de bonne longueur?
