@@ -54,6 +54,7 @@ def sans_repassage(l):
                     v_k = (l[k][0]-l[k-1][0],l[k][1]-l[k-1][1]) 
                     if v_k == v_a:
                         return False
+    return True 
     #compléxité haute pour un algo simple comme ça je trouve
 
 def est_cyclique(l):
@@ -200,8 +201,6 @@ def save_dico():
     for x in Opti_chemin:
         g.write(f"{x[0]};{x[1]};{Opti_chemin[x][0]};{Opti_chemin[x][1]}"+"\n")
 
-
-
 # Ce premier algorithme réalise un chemin aléatoirement, si il est cyclique et est plus optimal que celui du dictionnaire alors il l'enregistre dans celui ci 
 def random_search(n,lngth):
     """enregistre dans un dictionnaire que tu peux acutalisé le meilleur parcours qu'il a trouvé pour une longueur n dans un damier de taille n, attention ici on ne s'autorise qu'à se déplacer vers des cases adjacentes"""
@@ -238,7 +237,6 @@ def random_search(n,lngth):
     else : return "Pas de nouveau chemin trouvé"
 
 #Ce deuxième algorithme test exhaustivement tout les chemins cyclique possibles et renvoie celui qui est le plus optimal
-
 def brute_search_aux(n,parc,vitesse,lngth):
     m = len(parc)
     if epsi(lngth,0,sqrt(2)) :
@@ -334,42 +332,51 @@ def opti_BFS(n,l):
 #Après coup je ne suis pas sûr que cette technique nous fasse gagner grand chose face à Brute_search, à part de la simplicité d'écriture
 #A retravailler     
 
-##Récursion
+##Floyd Warshall
 
 #Pour trouver les chemins cyclique minimisant le rayon d'un point M vers M on s'intéresse à trouvers celui minimisant le rayon d'un point adjacent de M : P vers les autres points adjacents
 
 #WIP, il marche vraiment pas du tout pour l'instant
-def cycle_rec(n,l):
+def cycle_FW(n,l):
     #On initialise "naïvement" Min_mat
-    
     def constructeur(i,j):
         if 0<abs(i%n-j%n) + abs(i//n - j//n)<=l:
-            L = [(a,b) for a in range(min(i%n,j%n),max(i%n,j%n)+1) for b in range(min(i//n,j//n),max(i//n,j//n)+1)]#
+            L = []
+            b = min(i//n,j//n)
+            for a in range(min(i%n,j%n),max(i%n,j%n)+1):
+                L.append((a,b))
+            b = max(i%n,j%n)
+            for a in range(min(i//n,j//n),max(i//n,j//n)+1):
+                L.append((b,a))
             d_Or = moy_d_Or_parcours(L,n)
             return [L,d_Or,abs(i%n-j%n) + abs(i//n - j//n)]
+        
         elif abs(i%n-j%n) + abs(i//n - j//n)==0:
             return [[(i%n,i//n)],pi*(n**2),1]
+        
         else : return [[(-1,-1)],pi*(n**2),n*n] #valeurs absurde qui majorent ce qu'on veut trouver
 
-    #Description Min_mat ->
+    #Description Min_mat -> Initialement cette matrice est fait de chemin naïf (on se déplace en latéral puis en verticale)
     Min_mat = [[ constructeur(i,j) for i in range(n*n)] for j in range(n*n) ]
 
     #On applique Floyd Warshall
     for k in range(n*n):
         for i in range(n*n):
             for j in range(n*n):
-                if epsi((Min_mat[i][k][2]+Min_mat[k][j][2]),l/(2**(n*n-k-1)),1): #je comprends pas ce qu'il ne va pas dans cette partie
-                    moy_somme_parcours = (Min_mat[i][k][2]*Min_mat[i][k][1] + Min_mat[k][j][2]*Min_mat[k][j][1])/(Min_mat[k][j][2]+Min_mat[i][k][2]) #formule probablement fausse
-                    if Min_mat[i][j][1]> moy_somme_parcours :
+                depth_lvl = l/(2**(n*n-k-1))
+                if epsi((Min_mat[i][k][2]+Min_mat[k][j][2]),depth_lvl,1):
+                    moy_somme_parcours = moy_d_Or_parcours(Min_mat[i][k][0] + Min_mat[k][j][0],n) 
+                    if Min_mat[i][j][1]> moy_somme_parcours or not epsi(Min_mat[i][j][2],depth_lvl,1):
                         Min_mat[i][j] = [Min_mat[i][k][0]+Min_mat[k][j][0],moy_somme_parcours,Min_mat[i][k][2]+Min_mat[k][j][2]]
-
+    
     #Recherche du minimum de min_Mat
-    minimum = [[],pi*n*n,0]
+    minimum = ["Résultat absurde",pi*n*n,0]
     for i in range(n*n):
             print(Min_mat[i][i])
-            if minimum[1]>Min_mat[i][i][1] and sans_repassage(Min_mat[i][i][0]):
+            if minimum[1]>Min_mat[i][i][1] and sans_repassage(Min_mat[i][i][0]) and epsi(Min_mat[i][i][2],l,1) :
                 minimum=Min_mat[i][i]
 
+    #On enregistre le minimum dans le dictionnaire Opti_chemin
     if (n,minimum[2]) in Opti_chemin:
         if minimum[1]<Opti_chemin[(n,minimum[2])][1]:
             print("succés")
@@ -380,4 +387,3 @@ def cycle_rec(n,l):
         Opti_chemin[(n,minimum[2])]=(minimum[0],minimum[1])
 
     return minimum
-
