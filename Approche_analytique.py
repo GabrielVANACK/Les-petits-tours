@@ -156,17 +156,33 @@ def Interpolation_splines(l):
     return fun
 
 ##Méthode du Lagrangien
-# On s'appuie ici sur cet article Wikipédia :https://fr.wikipedia.org/wiki/Multiplicateur_de_Lagrange
+# Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> C, où n est un entier
 
-#WIP
-def Lagrangien(phi,psi):
-    """ renvoie à le Lagrangien de la fonction phi suivant la condition psi"""
-    def L(lam,x):
-        return phi(x)-lam*psi(x)
-    return L
-
-#On suppose la différentiel de psi surjective en tout point
-
+def Lagrangien_C(opti,Dcontraintes,contraintes):
+    """opti est la différentielle de la fonction à optimiser, contraintes la liste des fonctions contraintes et Dcontraintes la liste des fonctions contraintes différenciées, (n et le n de C_n[X])."""
+    m = len(contraintes)
+    def Diff_Lag(P,X,*args): #Le premier argument est le point où on différencie, le deuxième argument est un polynôme et les autres sont les m multiplicateurs de lagrange.
+        if type(args) == str :
+            return m
+        else :
+            res = opti(P,X)
+            for i in range(1,m+1):
+                res += (Dcontraintes[i](P,X))*(args[i])
+            return res 
+    return Diff_Lag
+    
+def resolution(opti,Dcontraintes,contraintes,n):
+    m = len(contraintes)
+    Diff_Lag = Lagrangien_C(opti,Dcontraintes,contraintes)
+    C =[[complex(0,0) if (i != j or j>=n+1 ) else complex(1,0) for j in range(2*n)] for i in range(n)]+[[complex(0,0) if (i != j or j<=n) else complex(0,1) for j in range(2*n)] for i in range(n)]
+    def Sys(P,*args):
+        res = [0 for i in range(n+m)]
+        for i in range(n):
+            res[i]= Diff_Lag(P,*args) 
+        for i in range(m):
+            res[n+1+i] = contraintes[i]
+        return res
+#pas satisfaisant
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -220,5 +236,3 @@ def Graph_C(f,view,Inter):
     plt.title("graphe de la fonction f dans le plan")
     plt.show ()
 
-
-    

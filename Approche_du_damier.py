@@ -346,7 +346,7 @@ def cycle_FW(n,l):
             for a in range(min(i%n,j%n),max(i%n,j%n)+1):
                 L.append((a,b))
             b = max(i%n,j%n)
-            for a in range(min(i//n,j//n),max(i//n,j//n)+1):
+            for a in range(1+min(i//n,j//n),max(i//n,j//n)+1):
                 L.append((b,a))
             d_Or = moy_d_Or_parcours(L,n)
             return [L,d_Or,abs(i%n-j%n) + abs(i//n - j//n)]
@@ -354,7 +354,7 @@ def cycle_FW(n,l):
         elif abs(i%n-j%n) + abs(i//n - j//n)==0:
             return [[(i%n,i//n)],pi*(n**2),1]
         
-        else : return [[(-1,-1)],pi*(n**2),n*n] #valeurs absurde qui majorent ce qu'on veut trouver
+        else : return [[(-1,-1)],pi*(n**2),n*n] #valeurs absurdes qui majorent ce qu'on veut trouver
 
     #Description Min_mat -> Initialement cette matrice est fait de chemin naïf (on se déplace en latéral puis en verticale)
     Min_mat = [[ constructeur(i,j) for i in range(n*n)] for j in range(n*n) ]
