@@ -387,3 +387,19 @@ def cycle_FW(n,l):
         Opti_chemin[(n,minimum[2])]=(minimum[0],minimum[1])
 
     return minimum
+
+#A Tester
+def cycle_FW2(n,lngth):
+    M = [[(moy_d_Or_parcours([(i%n,i//n),(j%n,j//n)],n),[i,j]) if abs(i%n-j%n) + abs(i//n - j//n) == 1 else float("inf") for i in range(n*n)] for j in range(n*n) ]
+    for k in range(n*n):
+        for i in range(n*n):
+            for j in range(n*n):
+                if M[i][j][0] > M[i][k][0]+M[k][j][0] and len(M[i][k][1])+len(M[k][j][1])<=lngth:
+                    M[i,j]= (M[i][k][0]+M[k][j][0], M[i][k][1]+M[k][j][1])
+    
+    minimum = (["Absurde"],pi*n*n)
+    for i in range(n*n):
+        if minimum[1]>M[i,i][1]:
+            minimum = M[i,i] 
+    return (minimum[0],moy_d_Or_parcours(minimum[0],n))
+
