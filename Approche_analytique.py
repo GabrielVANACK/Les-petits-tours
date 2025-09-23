@@ -193,10 +193,13 @@ def Interpolation_splines(l):
 ##Méthode du Lagrangien (Dans l'espace des polynômes, pour résolution dans R^2)
 # Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> R, où n est un entier
 deg = 6 #Degré maximal des polynômes
-
+longueur_du_parcours= 50
 
 def Phi(P):
-    return integral(module(Poly_fun(P)),0,1)
+    def A(x):
+        F=Poly_fun(P)
+        return module(F(x))
+    return integral(A,0,1)
 
 def dPhi(P,k):
     """renvoie la différentiel selon e_k de Phi de P"""
@@ -223,7 +226,7 @@ def d2Phi(P,k,l):
     elif deg+1<=k<=2*deg+1 and deg+1<=l<=2*deg+1: 
         def F(x):
             return -(x**(k+l-2*deg-2))*((p(x).real)**2)/((module(p(x)))**3)
-    elif 0<=k<=deg and deg+1<=l<=2*deg+1: 
+    elif (0<=k<=deg and deg+1<=l<=2*deg+1) or (0<=l<=deg and deg+1<=k<=2*deg+1): 
         def F(x):
             return -(x**(k+l-deg-1))*((p(x).imag)*(p(x).real))/((module(p(x)))**3)
     else :
@@ -232,7 +235,8 @@ def d2Phi(P,k,l):
     return integral(F,0,1)
 
 def Omega(P):
-    return P(1).real-P(0).real + P(1).imag - P(0).imag
+    p = Poly_fun(P)
+    return p(1).real-p(0).real + p(1).imag - p(0).imag
 
 def dOmega(P,k):
     """renvoie la différentiel selon e_k de Omega de P"""
@@ -243,8 +247,10 @@ def d2Omega(P,l,k):
     return 0
 
 def Psi(P):
-    A = Poly_fun(Deriv_poly(P))
-    return integral(module(Poly_fun(A)),0,1)
+    def A(x):
+        F = Poly_fun(Deriv_poly(P))
+        return module(F(x))
+    return integral(A,0,1)-longueur_du_parcours
 
 def dPsi(P,k):
     A = Poly_fun(Deriv_poly(P)) 
@@ -262,15 +268,15 @@ def dPsi(P,k):
 
 def d2Psi(P,l,k):
     A = Poly_fun(Deriv_poly(P))
-    if k==1 or k==deg+1 or l==1 or l==deg+1:
+    if k==0 or k==deg+1 or l==0 or l==deg+1:
         return 0
     elif 1<=k<=deg and 1<=l<=deg: 
         def F(x):
             return -(k*l)*(x**(k+l-2))*((A(x).imag)**2)/((module(A(x)))**3)
     elif deg+2<=k<=2*deg+1 and deg+2<=l<=2*deg+1: 
         def F(x):
-            return -(k-deg-1)*(l-deg-1)*(x**(k+l-2*deg-4))*((A(x).real)**2)/((module(p(x)))**3)
-    elif 1<=k<=deg and deg+2<=l<=2*deg+1: 
+            return -(k-deg-1)*(l-deg-1)*(x**(k+l-2*deg-4))*((A(x).real)**2)/((module(A(x)))**3)
+    elif (1<=k<=deg and deg+2<=l<=2*deg+1) or (1<=l<=deg and deg+2<=k<=2*deg+1): 
         def F(x):
             return -(l-deg-1)*k*(x**(k+l-deg-2))*((A(x).imag)*(A(x).real))/((module(A(x)))**3)
     else :
@@ -280,41 +286,45 @@ def d2Psi(P,l,k):
 
 def Lagrangien(P,lambda1,lambda2):
     """appeler cette fonction est un abus de langage, elle représente la matrice dont on parle dans la section "problème à résoudre " des slides"""
-    F = [[]*(deg+3)]
-    for i in range(deg+1):
-        F[0][i] = dPhi(P,i) - lambda1*dOmega(P,i)-lambda2*dPsi(P,i)
-    F[deg+1]= Omega(P)
-    F[deg+2] = Psi(P)
+    F = [[0] for _ in range(2*deg+4)]
+    for i in range(2*deg+2):
+        F[i][0] = dPhi(P,i) - lambda1*dOmega(P,i)-lambda2*dPsi(P,i)
+    F[deg+2][0]= Omega(P)
+    F[deg+3][0] = Psi(P)
+    return F
 
 def Jacob(P,lambda1,lambda2):
     """ Cette fonction défini la matrice jacobienne du lagrangien."""
-    F =[[0]*(deg+3)]*(deg+3)
-    for i in range(deg+1):
-        for j in range(deg+1):
+    F =[[0]*(2*deg+4)]*(2*deg+4)
+    for i in range(2*deg+2):
+        for j in range(2*deg+2):
             F[i][j]= d2Phi(P,i,j) - lambda1*d2Omega(P,i,j)-lambda2*d2Psi(P,i,j)
     
-    for i in range(deg+3):
-        if i!= deg+1:
-            F[deg+1][i]= dOmega(P,i)
-            F[i][deg+1]= dOmega(P,i)
-        else : F[deg+1][deg+1]=0
+    for i in range(2*deg+2):
+            F[2*deg+2][i]= dOmega(P,i)
+            F[i][2*deg+2]= dOmega(P,i)
 
-    for i in range(deg+3):
-        if i!= deg+2:
-            F[deg+1][i]= dPsi(P,i)
-            F[i][deg+1]= dPsi(P,i)
-        else : F[deg+2][deg+2]=0
-
+    for i in range(2*deg+1):
+            F[2*deg+3][i]= dPsi(P,i)
+            F[i][2*deg+3]= dPsi(P,i)
+                                            #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
     return F 
 
 def Raph_Newton(X0, round=100):
     """version crash test de la méthode de Raphson Newton, on demande à ce que X0 = (P,lambda1,lmabda2)"""
-    a = len(X0)
+    b = len(X0[0])
+    X = [[0]]*(2*b+2)
+    for i in range(b):
+        X[i][0]=X0[0][i].real
+        X[i+b][0]=X0[0][i].imag
+    X[2*b][0]=X0[1]
+    X[2*b+1][0]=X0[2]
 
     for i in range(round):
-        X0 = Mat_add(X0,scal_mat((-1),Prod_mat((Inversion_mat(Jacob(X0[0],X0[1],X0[2]))),Lagrangien(Jacob(X0[0],X0[1],X0[2])))))
+        X = Mat_add(X,scal_mat((-1),Prod_mat(Jacob(X0[0],X0[1],X0[2]),Lagrangien(X0[0],X0[1],X0[2]))))
+        X0 = [[complex(X[i][0],X[i+b+1][0]) for i in range(b)]]+[X[b][0]]+[X[b+1][0]]
 
-
+    return X0
 
 import numpy as np
 import matplotlib.pyplot as plt
