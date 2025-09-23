@@ -28,6 +28,13 @@ def D(f,a):
         h = h/10
     return S[s-1]
 
+def integral(f,a,b,n=1000):
+    """réalise l'intégrale de f sur a b avec la méthode des rectangle."""
+    S=0
+    for i in range(n):
+        S+= (1/n)*(f(i*(b-a)/n))
+    return S
+
 #On représente le polynômes par la liste de leurs coefficients
 def Prod_poly(P,Q):
     """fait le produit de deux polynômes P et Q de degré quelconques"""
@@ -45,11 +52,39 @@ def Poly_fun(P):
     def Pol(a):
         S=0
         for i in range(n):
-            S += P[i]*(a**i)
+            S += (P[i])*(a**i)
         return S
     return Pol
 
+def Deriv_poly(P):
+    """prend un polynome en entrée et renvoie sa dérivé"""
+    n= len(P)
+    dP = [0]*n
+    for i in range(1,n):
+        dP[i-1]=i*P[i]
+    return dP
+
 #On représente les matrices par un tableau de leur coefficients
+def Mat_add(A,B):
+    """addtion de matrice A et B"""
+    (n,m) = (len(A),len(A[0]))
+    if (n,m) != (len(B),len(B[0])):
+        raise ValueError ("Matrice de taille différente, impossible d'additionner")
+    else : 
+        res = [[0]*m]*n
+        for i in range(n):
+            for j in range(m):
+                res[i][j]= A[i][j]+B[i][j]
+    return res
+
+def scal_mat(lam,A):
+    """prend un scalaire et un matrice en entrée et réalise l'addition"""
+    n,m = (len(A),len(A[0]))
+    res = [[0]*m]*n
+    for i in range(n):
+        for j in range(m):
+            res[i][j]= lam*A[i][j]
+    return res
 
 def Prod_mat(A,B):
     """ prend les matrices A,B en entrée et renvoie le produit matrcielle AB, print un message d'erreur dans le terminal si toutefois les tailles de matrices ne sont pas compatibles """
@@ -155,34 +190,131 @@ def Interpolation_splines(l):
         else : return 0 #Dans le cadre du problème il me semble faire sens d'attribuer à une fonction la valeur lorsqu'elle n'est pas défini (pour garantir le bon fonctionnement de C_graph)
     return fun
 
-##Méthode du Lagrangien
-# Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> C, où n est un entier
+##Méthode du Lagrangien (Dans l'espace des polynômes, pour résolution dans R^2)
+# Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> R, où n est un entier
+deg = 6 #Degré maximal des polynômes
 
-def Lagrangien_C(opti,Dcontraintes,contraintes):
-    """opti est la différentielle de la fonction à optimiser, contraintes la liste des fonctions contraintes et Dcontraintes la liste des fonctions contraintes différenciées, (n et le n de C_n[X])."""
-    m = len(contraintes)
-    def Diff_Lag(P,X,*args): #Le premier argument est le point où on différencie, le deuxième argument est un polynôme et les autres sont les m multiplicateurs de lagrange.
-        if type(args) == str :
-            return m
-        else :
-            res = opti(P,X)
-            for i in range(1,m+1):
-                res += (Dcontraintes[i](P,X))*(args[i])
-            return res 
-    return Diff_Lag
+
+def Phi(P):
+    return integral(module(Poly_fun(P)),0,1)
+
+def dPhi(P,k):
+    """renvoie la différentiel selon e_k de Phi de P"""
     
-def resolution(opti,Dcontraintes,contraintes,n):
-    m = len(contraintes)
-    Diff_Lag = Lagrangien_C(opti,Dcontraintes,contraintes)
-    C =[[complex(0,0) if (i != j or j>=n+1 ) else complex(1,0) for j in range(2*n)] for i in range(n)]+[[complex(0,0) if (i != j or j<=n) else complex(0,1) for j in range(2*n)] for i in range(n)]
-    def Sys(P,*args):
-        res = [0 for i in range(n+m)]
-        for i in range(n):
-            res[i]= Diff_Lag(P,*args) 
-        for i in range(m):
-            res[n+1+i] = contraintes[i]
-        return res
-#pas satisfaisant
+    p = Poly_fun(P) 
+    if k<=deg and k>=0:
+        def F(x):
+            return (x**k)*((p(x)).real)/(module(p(x)))
+    elif k<=2*deg+1 and k>=deg+1:
+        def F(x):
+            return (x**(k-deg-1))*((p(x)).imag)/(module(p(x)))
+    else :
+        raise ValueError("indice k trop grand ou trop petit")
+    return integral(F,0,1)
+
+def d2Phi(P,k,l):
+    """renvoie la différentiel selon e_k et e_l de Phi de P"""
+
+    p = Poly_fun(P) 
+    
+    if 0<=k<=deg and 0<=l<=deg: 
+        def F(x):
+            return -(x**(k+l))*((p(x).imag)**2)/((module(p(x)))**3)
+    elif deg+1<=k<=2*deg+1 and deg+1<=l<=2*deg+1: 
+        def F(x):
+            return -(x**(k+l-2*deg-2))*((p(x).real)**2)/((module(p(x)))**3)
+    elif 0<=k<=deg and deg+1<=l<=2*deg+1: 
+        def F(x):
+            return -(x**(k+l-deg-1))*((p(x).imag)*(p(x).real))/((module(p(x)))**3)
+    else :
+        raise ValueError("indice k ou l trop grand ou trop petit")
+        
+    return integral(F,0,1)
+
+def Omega(P):
+    return P(1).real-P(0).real + P(1).imag - P(0).imag
+
+def dOmega(P,k):
+    """renvoie la différentiel selon e_k de Omega de P"""
+    return 1
+
+def d2Omega(P,l,k):
+    """renvoie la différentiel selon e_k et e_l de Omega de P"""
+    return 0
+
+def Psi(P):
+    A = Poly_fun(Deriv_poly(P))
+    return integral(module(Poly_fun(A)),0,1)
+
+def dPsi(P,k):
+    A = Poly_fun(Deriv_poly(P)) 
+    if k==0 or k==deg+1:
+        return 0
+    elif k<=deg and k>=1:
+        def F(x):
+            return k*(x**(k-1))*((A(x)).real)/(module(A(x)))
+    elif k<=2*deg+1 and k>=deg+2:
+        def F(x):
+            return (k-deg-1)*(x**(k-deg-2))*((A(x)).imag)/(module(A(x)))
+    else :
+        raise ValueError("indice k trop grand ou trop petit")
+    return integral(F,0,1)
+
+def d2Psi(P,l,k):
+    A = Poly_fun(Deriv_poly(P))
+    if k==1 or k==deg+1 or l==1 or l==deg+1:
+        return 0
+    elif 1<=k<=deg and 1<=l<=deg: 
+        def F(x):
+            return -(k*l)*(x**(k+l-2))*((A(x).imag)**2)/((module(A(x)))**3)
+    elif deg+2<=k<=2*deg+1 and deg+2<=l<=2*deg+1: 
+        def F(x):
+            return -(k-deg-1)*(l-deg-1)*(x**(k+l-2*deg-4))*((A(x).real)**2)/((module(p(x)))**3)
+    elif 1<=k<=deg and deg+2<=l<=2*deg+1: 
+        def F(x):
+            return -(l-deg-1)*k*(x**(k+l-deg-2))*((A(x).imag)*(A(x).real))/((module(A(x)))**3)
+    else :
+        raise ValueError("indice k ou l trop grand ou trop petit")
+        
+    return integral(F,0,1)
+
+def Lagrangien(P,lambda1,lambda2):
+    """appeler cette fonction est un abus de langage, elle représente la matrice dont on parle dans la section "problème à résoudre " des slides"""
+    F = [[]*(deg+3)]
+    for i in range(deg+1):
+        F[0][i] = dPhi(P,i) - lambda1*dOmega(P,i)-lambda2*dPsi(P,i)
+    F[deg+1]= Omega(P)
+    F[deg+2] = Psi(P)
+
+def Jacob(P,lambda1,lambda2):
+    """ Cette fonction défini la matrice jacobienne du lagrangien."""
+    F =[[0]*(deg+3)]*(deg+3)
+    for i in range(deg+1):
+        for j in range(deg+1):
+            F[i][j]= d2Phi(P,i,j) - lambda1*d2Omega(P,i,j)-lambda2*d2Psi(P,i,j)
+    
+    for i in range(deg+3):
+        if i!= deg+1:
+            F[deg+1][i]= dOmega(P,i)
+            F[i][deg+1]= dOmega(P,i)
+        else : F[deg+1][deg+1]=0
+
+    for i in range(deg+3):
+        if i!= deg+2:
+            F[deg+1][i]= dPsi(P,i)
+            F[i][deg+1]= dPsi(P,i)
+        else : F[deg+2][deg+2]=0
+
+    return F 
+
+def Raph_Newton(X0, round=100):
+    """version crash test de la méthode de Raphson Newton, on demande à ce que X0 = (P,lambda1,lmabda2)"""
+    a = len(X0)
+
+    for i in range(round):
+        X0 = Mat_add(X0,scal_mat((-1),Prod_mat((Inversion_mat(Jacob(X0[0],X0[1],X0[2]))),Lagrangien(Jacob(X0[0],X0[1],X0[2])))))
+
+
 
 import numpy as np
 import matplotlib.pyplot as plt
