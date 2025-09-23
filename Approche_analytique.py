@@ -321,7 +321,7 @@ def Raph_Newton(X0, round=100):
     X[2*b+1][0]=X0[2]
 
     for i in range(round):
-        X = Mat_add(X,scal_mat((-1),Prod_mat(Jacob(X0[0],X0[1],X0[2]),Lagrangien(X0[0],X0[1],X0[2]))))
+        X = Mat_add(X,scal_mat((-1),Prod_mat(Inversion_mat(Jacob(X0[0],X0[1],X0[2])),Lagrangien(X0[0],X0[1],X0[2]))))
         X0 = [[complex(X[i][0],X[i+b+1][0]) for i in range(b)]]+[X[b][0]]+[X[b+1][0]]
 
     return X0
