@@ -104,35 +104,28 @@ def Prod_mat(A,B):
 def Inversion_mat(A):
     #BY Chat GPT
     """Inverse une matrice carrée A en utilisant la méthode de Gauss-Jordan."""
+    A = np.array(A, dtype=float)
+    
+    # Vérification que la matrice est carrée
+    if A.shape[0] != A.shape[1]:
+        raise ValueError("La matrice doit être carrée pour être inversible.")
+    
+    # Vérification du déterminant
+    if np.linalg.det(A) == 0:
+        raise ValueError("La matrice n'est pas inversible (det = 0).")
+    
+    # Calcul de l'inverse et arrondi
+    A_inv = np.linalg.inv(A)
+    A_inv = np.round(A_inv, decimals=decimals)
+    
+    # Conversion en liste de listes
+    return A_inv.tolist()
+    
+def visu_mat(A):
+    """programme pour visualiser la matrice A"""
     n = len(A)
-    # Vérification si la matrice est carrée
-    if any(len(row) != n for row in A):
-        raise ValueError("La matrice doit être carrée pour être inversée.")
-    
-    # Création de la matrice augmentée [A | I]
-    I = [[1 if i == j else 0 for j in range(n)] for i in range(n)]
-    tab = [A[i] + I[i] for i in range(n)]
-    
-    # Réduction de la matrice augmentée
     for i in range(n):
-        # Recherche du pivot
-        pivot = tab[i][i]
-        if pivot == 0:
-            raise ValueError("La matrice ne peut pas être inversée.")
-        
-        # Normalisation de la ligne du pivot
-        tab[i] = [x / pivot for x in tab[i]]
-        
-        # Élimination des autres lignes
-        for j in range(n):
-            if i != j:
-                factor = tab[j][i]
-                tab[j] = [tab[j][k] - factor * tab[i][k] for k in range(2 * n)]
-    
-    # Extraction de la matrice inverse (partie droite de la matrice augmentée)
-    inverse = [row[n:] for row in tab]
-    return inverse
-    
+            print(A[i])
 ##Interpolation de lagrange
 
 def Poly_de_Lag(l):
@@ -236,15 +229,21 @@ def d2Phi(P,k,l):
 
 def Omega(P):
     p = Poly_fun(P)
-    return p(1).real-p(0).real + p(1).imag - p(0).imag
+    return module(p(1)-p(0))
 
 def dOmega(P,k):
     """renvoie la différentiel selon e_k de Omega de P"""
-    return 1
+    p = Poly_fun(P)
+    if 0<=k<= deg :
+        return 2*(p(1)-p(0)).real
+    elif deg +1 <=k<=2*deg +1:
+        return 2*(p(1)-p(0)).imag
+    else :
+        raise ValueError("k est plus gand ou plus petit que le degré des polynôme (variable deg)")
 
 def d2Omega(P,l,k):
     """renvoie la différentiel selon e_k et e_l de Omega de P"""
-    return 0
+    return 2
 
 def Psi(P):
     def A(x):
@@ -298,17 +297,18 @@ def Jacob(P,lambda1,lambda2):
     F =[[0]*(2*deg+4)]*(2*deg+4)
     for i in range(2*deg+2):
         for j in range(2*deg+2):
-            F[i][j]= d2Phi(P,i,j) - lambda1*d2Omega(P,i,j)-lambda2*d2Psi(P,i,j)
+            F[i][j]= d2Phi(P,i,j) - lambda1*d2Omega(P,i,j) - lambda2*d2Psi(P,i,j)
     
     for i in range(2*deg+2):
             F[2*deg+2][i]= dOmega(P,i)
             F[i][2*deg+2]= dOmega(P,i)
 
-    for i in range(2*deg+1):
+    for i in range(2*deg+2):
             F[2*deg+3][i]= dPsi(P,i)
             F[i][2*deg+3]= dPsi(P,i)
-                                            #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
+    visu_mat(F)                              #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
     return F 
+
 
 def Raph_Newton(X0, round=100):
     """version crash test de la méthode de Raphson Newton, on demande à ce que X0 = (P,lambda1,lmabda2)"""
@@ -324,7 +324,7 @@ def Raph_Newton(X0, round=100):
         X = Mat_add(X,scal_mat((-1),Prod_mat(Inversion_mat(Jacob(X0[0],X0[1],X0[2])),Lagrangien(X0[0],X0[1],X0[2]))))
         X0 = [[complex(X[i][0],X[i+b+1][0]) for i in range(b)]]+[X[b][0]]+[X[b+1][0]]
 
-    return X0
+    return X0       #ne marche pas à cause de l'inversion de matrice
 
 import numpy as np
 import matplotlib.pyplot as plt
