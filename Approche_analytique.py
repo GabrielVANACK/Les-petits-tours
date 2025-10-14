@@ -1,5 +1,8 @@
 import math as math
 import cmath as cmath
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 ##Fonctions usuels
 
@@ -71,7 +74,7 @@ def Mat_add(A,B):
     if (n,m) != (len(B),len(B[0])):
         raise ValueError ("Matrice de taille différente, impossible d'additionner")
     else : 
-        res = [[0]*m]*n
+        res = [[0 for _ in range(m)] for _ in range(n)]
         for i in range(n):
             for j in range(m):
                 res[i][j]= A[i][j]+B[i][j]
@@ -80,10 +83,10 @@ def Mat_add(A,B):
 def scal_mat(lam,A):
     """prend un scalaire et un matrice en entrée et réalise l'addition"""
     n,m = (len(A),len(A[0]))
-    res = [[0]*m]*n
+    res = [[0 for _ in range(m)] for _ in range(n)]
     for i in range(n):
         for j in range(m):
-            res[i][j]= lam*A[i][j]
+            res[i][j]= lam*(A[i][j])
     return res
 
 def Prod_mat(A,B):
@@ -102,30 +105,17 @@ def Prod_mat(A,B):
     else : raise ValueError("les tailles des matrices ne sont pas compatibles")
 
 def Inversion_mat(A):
-    #BY Chat GPT
-    """Inverse une matrice carrée A en utilisant la méthode de Gauss-Jordan."""
-    A = np.array(A, dtype=float)
-    
-    # Vérification que la matrice est carrée
-    if A.shape[0] != A.shape[1]:
-        raise ValueError("La matrice doit être carrée pour être inversible.")
-    
-    # Vérification du déterminant
-    if np.linalg.det(A) == 0:
-        raise ValueError("La matrice n'est pas inversible (det = 0).")
-    
-    # Calcul de l'inverse et arrondi
-    A_inv = np.linalg.inv(A)
-    A_inv = np.round(A_inv, decimals=decimals)
-    
-    # Conversion en liste de listes
-    return A_inv.tolist()
+    #if np.linalg.det(A) ==0 :
+    #    raise ValueError("la matrice n'est pas inversible")
+    #else:
+    return np.linalg.pinv(A).tolist()
     
 def visu_mat(A):
     """programme pour visualiser la matrice A"""
-    n = len(A)
+    n,m = (len(A),len(A[0]))
     for i in range(n):
-            print(A[i])
+            rnd =[round(A[i][j],3) for j in range(m)]
+            print(rnd)
 ##Interpolation de lagrange
 
 def Poly_de_Lag(l):
@@ -143,9 +133,10 @@ def Poly_de_Lag(l):
 def Interpolation_Lagrange(l):
     """définit le polynôme interpolateur de lagrange d'une liste l de points"""
     PL = Poly_de_Lag(l)
-    n = len(PL)
+    n,m = (len(PL),len(PL[0]))
     IL = []
-    for i in range(n):
+    print(PL)
+    for i in range(m):
         a=0
         for j in range(n):
             a += l[j][1]*PL[j][i]
@@ -186,7 +177,7 @@ def Interpolation_splines(l):
 ##Méthode du Lagrangien (Dans l'espace des polynômes, pour résolution dans R^2)
 # Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> R, où n est un entier
 deg = 6 #Degré maximal des polynômes
-longueur_du_parcours= 50
+longueur_du_parcours= 20.0 #Longueur du parcours que l'on souhaite tracer
 
 def Phi(P):
     def A(x):
@@ -294,41 +285,50 @@ def Lagrangien(P,lambda1,lambda2):
 
 def Jacob(P,lambda1,lambda2):
     """ Cette fonction défini la matrice jacobienne du lagrangien."""
-    F =[[0]*(2*deg+4)]*(2*deg+4)
+    F =[[0 for _ in range(2*deg+4)] for _ in range(2*deg+4)]
     for i in range(2*deg+2):
         for j in range(2*deg+2):
             F[i][j]= d2Phi(P,i,j) - lambda1*d2Omega(P,i,j) - lambda2*d2Psi(P,i,j)
     
     for i in range(2*deg+2):
-            F[2*deg+2][i]= dOmega(P,i)
-            F[i][2*deg+2]= dOmega(P,i)
+        F[2*deg+2][i]= dOmega(P,i)
+        F[i][2*deg+2]= dOmega(P,i)
 
     for i in range(2*deg+2):
-            F[2*deg+3][i]= dPsi(P,i)
-            F[i][2*deg+3]= dPsi(P,i)
-    visu_mat(F)                              #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
+        F[2*deg+3][i]= dPsi(P,i)
+        F[i][2*deg+3]= dPsi(P,i)
+
+    F[2*deg+2][2*deg+2] = 0
+    F[2*deg+2][2*deg+3] = 0
+    F[2*deg+3][2*deg+2] = 0
+    F[2*deg+3][2*deg+3] = 0
+
+    #visu_mat(F)                              #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
     return F 
+
+#Polynome test [complex(4,-5),complex(-20,50),complex(0,-60),complex(10,10),complex(5,0),complex(5,-30),complex(0,30)]
 
 
 def Raph_Newton(X0, round=100):
     """version crash test de la méthode de Raphson Newton, on demande à ce que X0 = (P,lambda1,lmabda2)"""
     b = len(X0[0])
-    X = [[0]]*(2*b+2)
+    X = [[0] for _ in range(2*b+2)]
     for i in range(b):
         X[i][0]=X0[0][i].real
         X[i+b][0]=X0[0][i].imag
     X[2*b][0]=X0[1]
     X[2*b+1][0]=X0[2]
-
     for i in range(round):
-        X = Mat_add(X,scal_mat((-1),Prod_mat(Inversion_mat(Jacob(X0[0],X0[1],X0[2])),Lagrangien(X0[0],X0[1],X0[2]))))
-        X0 = [[complex(X[i][0],X[i+b+1][0]) for i in range(b)]]+[X[b][0]]+[X[b+1][0]]
+        X = Mat_add(X, scal_mat((-1), Prod_mat(Inversion_mat(Jacob(X0[0], X0[1], X0[2])), Lagrangien(X0[0], X0[1], X0[2]))))
+        X0 = [[complex(X[i][0], X[i + b][0]) for i in range(b)]]
+        X0.append(X[2 * b][0])
+        X0.append(X[2 * b + 1][0])
 
     return X0       #ne marche pas à cause de l'inversion de matrice
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
+def satis_facteur(P):
+    print(f"Cyclcité : \n distance entre P(1) et P(0) est {Omega(P)}")
+    print(f"Longueur : \n La longueur voulue est {longueur_du_parcours}, le parcours fait {Psi(P)+longueur_du_parcours} soit un différence de {Psi(P)}")
 
 def Graph_C(f,view,Inter):
     """prend en entrée un fonction f, view qui est la vue du plan complexe disponible sur le graph renvoyée et Inter un intervalle centrée en 0 sur lequel f est calculé; renvoie un graph. """
