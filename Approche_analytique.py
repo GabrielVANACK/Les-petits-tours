@@ -104,11 +104,14 @@ def Prod_mat(A,B):
         return M
     else : raise ValueError("les tailles des matrices ne sont pas compatibles")
 
+det_inv = []
+
 def Inversion_mat(A):
     #if np.linalg.det(A) ==0 :
     #    raise ValueError("la matrice n'est pas inversible")
     #else:
-    return np.linalg.pinv(A).tolist()
+    det_inv.append(1/np.linalg.det(A))
+    return np.linalg.inv(A).tolist()
     
 def visu_mat(A):
     """programme pour visualiser la matrice A"""
@@ -176,7 +179,7 @@ def Interpolation_splines(l):
 
 ##Méthode du Lagrangien (Dans l'espace des polynômes, pour résolution dans R^2)
 # Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> R, où n est un entier
-deg = 6 #Degré maximal des polynômes
+deg = 8 #Degré maximal des polynômes
 longueur_du_parcours= 20.0 #Longueur du parcours que l'on souhaite tracer
 
 def Phi(P):
@@ -220,7 +223,7 @@ def d2Phi(P,k,l):
 
 def Omega(P):
     p = Poly_fun(P)
-    return module(p(1)-p(0))
+    return (module(p(1)-p(0)))**2
 
 def dOmega(P,k):
     """renvoie la différentiel selon e_k de Omega de P"""
@@ -276,11 +279,13 @@ def d2Psi(P,l,k):
 
 def Lagrangien(P,lambda1,lambda2):
     """appeler cette fonction est un abus de langage, elle représente la matrice dont on parle dans la section "problème à résoudre " des slides"""
-    F = [[0] for _ in range(2*deg+4)]
+    F = [0 for _ in range(2*deg+4)]
+
+    F[2*deg+2] = [Omega(P)]
+    F[2*deg+3] = [Psi(P)]
     for i in range(2*deg+2):
-        F[i][0] = dPhi(P,i) - lambda1*dOmega(P,i)-lambda2*dPsi(P,i)
-    F[deg+2][0]= Omega(P)
-    F[deg+3][0] = Psi(P)
+        F[i] = [dPhi(P,i) - lambda1*dOmega(P,i)-lambda2*dPsi(P,i)]
+
     return F
 
 def Jacob(P,lambda1,lambda2):
@@ -306,7 +311,7 @@ def Jacob(P,lambda1,lambda2):
     #visu_mat(F)                              #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
     return F 
 
-#Polynome test [complex(4,-5),complex(-20,50),complex(0,-60),complex(10,10),complex(5,0),complex(5,-30),complex(0,30)]
+#Polynome seed [complex(0,0),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
 
 
 def Raph_Newton(X0, round=100):
@@ -378,3 +383,27 @@ def Graph_C(f,view,Inter):
     plt.title("graphe de la fonction f dans le plan")
     plt.show ()
 
+
+
+
+import matplotlib.pyplot as plt
+
+def plot_values(values):
+    # Préparer les données d'index
+    x = [i for  i in range(len(values))] # garantit des indices entiers cohérents
+    y = values
+
+    # Création de la figure
+    plt.figure(figsize=(8, 4))
+    plt.plot(x, y, marker="o", linestyle="-")
+    plt.scatter(x, y, s=40)  # met en évidence les points
+
+    # Titres et grille
+    plt.title("évolution de l'inversion du déterminant")
+    plt.xlabel("itération")
+    plt.ylabel("1/det(A)")
+    plt.grid(True, linestyle="--", alpha=0.6)
+
+    # Affichage des indices comme ticks entiers
+    plt.xticks(x)
+    plt.show()
