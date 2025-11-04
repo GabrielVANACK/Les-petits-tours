@@ -3,6 +3,7 @@ import cmath as cmath
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+import random as random
 
 ##Fonctions usuels
 
@@ -15,7 +16,7 @@ def epsi(a,obj,e):
     else : return False
 
 def module(z):
-    return math.sqrt(z.real**2 + z.imag**2)
+    return math.sqrt((z.real)**2 + (z.imag)**2)
 
 def D(f,a):
     """calcul la dérivée de la fonction f en a"""
@@ -35,7 +36,7 @@ def integral(f,a,b,n=1000):
     """réalise l'intégrale de f sur a b avec la méthode des rectangle."""
     S=0
     for i in range(n):
-        S+= (1/n)*(f(i*(b-a)/n))
+        S+= ((1/n))*((f(i*(b-a)/n)))
     return S
 
 #On représente le polynômes par la liste de leurs coefficients
@@ -62,7 +63,7 @@ def Poly_fun(P):
 def Deriv_poly(P):
     """prend un polynome en entrée et renvoie sa dérivé"""
     n= len(P)
-    dP = [0]*n
+    dP = [0 for _ in range(n-1)]
     for i in range(1,n):
         dP[i-1]=i*P[i]
     return dP
@@ -104,13 +105,7 @@ def Prod_mat(A,B):
         return M
     else : raise ValueError("les tailles des matrices ne sont pas compatibles")
 
-det_inv = []
-
 def Inversion_mat(A):
-    #if np.linalg.det(A) ==0 :
-    #    raise ValueError("la matrice n'est pas inversible")
-    #else:
-    det_inv.append(1/np.linalg.det(A))
     return np.linalg.inv(A).tolist()
     
 def visu_mat(A):
@@ -179,7 +174,7 @@ def Interpolation_splines(l):
 
 ##Méthode du Lagrangien (Dans l'espace des polynômes, pour résolution dans R^2)
 # Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> R, où n est un entier
-deg = 8 #Degré maximal des polynômes
+deg = 2 #Degré maximal des polynômes, 8 pour la seed
 longueur_du_parcours= 20.0 #Longueur du parcours que l'on souhaite tracer
 
 def Phi(P):
@@ -228,16 +223,21 @@ def Omega(P):
 def dOmega(P,k):
     """renvoie la différentiel selon e_k de Omega de P"""
     p = Poly_fun(P)
-    if 0<=k<= deg :
-        return 2*(p(1)-p(0)).real
-    elif deg +1 <=k<=2*deg +1:
-        return 2*(p(1)-p(0)).imag
+    if k == 0 or k==deg+1 :
+        return 0
+    elif 1<=k<= deg :
+        return 2*(p(1)-p(0)).real 
+    elif deg +2 <=k<=2*deg +1:
+        return 2*(p(1)-p(0)).imag 
     else :
         raise ValueError("k est plus gand ou plus petit que le degré des polynôme (variable deg)")
 
 def d2Omega(P,l,k):
     """renvoie la différentiel selon e_k et e_l de Omega de P"""
-    return 2
+    if k == 0 or k==deg+1 or l ==0 or l==deg+1:
+        return 0
+    else:
+        return 2
 
 def Psi(P):
     def A(x):
@@ -303,36 +303,40 @@ def Jacob(P,lambda1,lambda2):
         F[2*deg+3][i]= dPsi(P,i)
         F[i][2*deg+3]= dPsi(P,i)
 
-    F[2*deg+2][2*deg+2] = 0
-    F[2*deg+2][2*deg+3] = 0
-    F[2*deg+3][2*deg+2] = 0
-    F[2*deg+3][2*deg+3] = 0
+    
 
-    #visu_mat(F)                              #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
+
+    #visu_mat(F)
+    #print(F[2*deg+2])
+    print(np.linalg.det(F))                              #En effet on ne traite pas toute la matrice, mais ces cas là vallent 0, voir la représentation de la matrice
+    #print("\n")
     return F 
 
-#Polynome seed [complex(0,0),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
-
+#Polynome seed [complex(0.1,0.1),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
 
 def Raph_Newton(X0, round=100):
     """version crash test de la méthode de Raphson Newton, on demande à ce que X0 = (P,lambda1,lmabda2)"""
     b = len(X0[0])
-    X = [[0] for _ in range(2*b+2)]
+    X = [0 for _ in range(2*b+2)]
     for i in range(b):
-        X[i][0]=X0[0][i].real
-        X[i+b][0]=X0[0][i].imag
-    X[2*b][0]=X0[1]
-    X[2*b+1][0]=X0[2]
+        X[i]=[X0[0][i].real]
+        X[i+b]=[X0[0][i].imag]
+    X[2*b]=[X0[1]]
+    X[2*b+1]=[X0[2]]
     for i in range(round):
         X = Mat_add(X, scal_mat((-1), Prod_mat(Inversion_mat(Jacob(X0[0], X0[1], X0[2])), Lagrangien(X0[0], X0[1], X0[2]))))
         X0 = [[complex(X[i][0], X[i + b][0]) for i in range(b)]]
         X0.append(X[2 * b][0])
         X0.append(X[2 * b + 1][0])
 
+        #print(X0)
+        satis_facteur(X0[0])
+        print("\n")
+
     return X0       #ne marche pas à cause de l'inversion de matrice
 
 def satis_facteur(P):
-    print(f"Cyclcité : \n distance entre P(1) et P(0) est {Omega(P)}")
+    print(f"Cyclcité : \n distance entre P(1) et P(0) est {cmath.sqrt(Omega(P))}")
     print(f"Longueur : \n La longueur voulue est {longueur_du_parcours}, le parcours fait {Psi(P)+longueur_du_parcours} soit un différence de {Psi(P)}")
 
 def Graph_C(f,view,Inter):
