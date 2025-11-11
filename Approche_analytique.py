@@ -105,8 +105,15 @@ def Prod_mat(A,B):
         return M
     else : raise ValueError("les tailles des matrices ne sont pas compatibles")
 
+det_log = []
+
 def Inversion_mat(A):
-    return np.linalg.inv(A).tolist()
+    det_log.append(1/(np.linalg.det(A)))
+    if np.linalg.det(A)==0 : 
+        raise ValueError ("Determinant nul matrice non inversible")
+    else :
+         
+        return np.linalg.inv(A).tolist()
     
 def visu_mat(A):
     """programme pour visualiser la matrice A"""
@@ -174,7 +181,7 @@ def Interpolation_splines(l):
 
 ##Méthode du Lagrangien (Dans l'espace des polynômes, pour résolution dans R^2)
 # Sauf contre indication toutes les fonctions évoquée dans cette partie sont des fonctions de C_n[X]-> R, où n est un entier
-deg = 2 #Degré maximal des polynômes, 8 pour la seed
+deg = 8 #Degré maximal des polynômes, 8 pour la seed
 longueur_du_parcours= 20.0 #Longueur du parcours que l'on souhaite tracer
 
 def Phi(P):
@@ -329,7 +336,8 @@ def Raph_Newton(X0, round=100):
         X0.append(X[2 * b][0])
         X0.append(X[2 * b + 1][0])
 
-        #print(X0)
+        #visu_mat(Jacob(X0[0], X0[1], X0[2]))
+        print(X0)
         satis_facteur(X0[0])
         print("\n")
 
@@ -338,6 +346,7 @@ def Raph_Newton(X0, round=100):
 def satis_facteur(P):
     print(f"Cyclcité : \n distance entre P(1) et P(0) est {cmath.sqrt(Omega(P))}")
     print(f"Longueur : \n La longueur voulue est {longueur_du_parcours}, le parcours fait {Psi(P)+longueur_du_parcours} soit un différence de {Psi(P)}")
+    print(f"Rayon moyen : \n le rayon moyen à l'origine du plan complexe de P sur [0,1] est {Phi(P)}")
 
 def Graph_C(f,view,Inter):
     """prend en entrée un fonction f, view qui est la vue du plan complexe disponible sur le graph renvoyée et Inter un intervalle centrée en 0 sur lequel f est calculé; renvoie un graph. """
