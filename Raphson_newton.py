@@ -2,48 +2,58 @@ import numpy as np
 
 ###Généralités
 
-def polprod(P=np.array,Q=np.array):
+def polprod(P = np.linspace,Q=np.array):
     """réalise le produit de cauchy des polynômes P et Q sous forme de liste de coefficients"""
     n=len(P)
     m=len(Q)
-    PQ = np.zeros(1,(n+m-1))
+    PQ= np.linspace(0+0j,0+0j,(n+m-1))
     for i in range(n):
         for j in range(m):
             PQ[i+j] += P[i]*Q[j]
 
     return PQ
 
-def poladd(P=np.array,Q=np.array):
+def poladd(P = np.linspace,Q=np.array):
     """réalise l'adition des polynômes P et Q représenté par des listes"""
     n=len(P)
     m=len(Q)
     p = max(n,m)
-    PplusQ= np.zeros((1,p))
+    PplusQ= np.linspace(0+0j,0+0j,n)
     for i in range(p):
         PplusQ[i] = P[i] + Q[i]
     return PplusQ
 
-def fun_p(P=np.array):
+def fun_p(P = np.linspace):
     """renvoie la fonction polynomiale du polynôme définie pas la liste de ses coefficients P"""
     n = len(P)
     def poly_fun(x):
         res = 0
-        for i in range(n):
-            res = P[i]*x**i
+        for k in range(n):
+            res += (x**k)*P[k]
         return res
     return poly_fun
 
-def dp(P=np.array):
+def dp(P = np.linspace):
     """prend un polynome en entrée et renvoie sa dérivé"""
     n= len(P)
-    dP = np.zeros((1,n))
-    for i in range(1,n):
-        dP[i-1]=i*P[i]
+    dP = np.linspace(0+0j,0+0j,n-1)
+    for k in range(1,n):
+        dP[k-1]=k*P[k]
     return dP
 
 def matprod(A=np.array,B=np.array):
     """renvoie le produit matricielle de A par B"""
-    return np.matmul(A,B)
+    (n,m) = np.shape(A)
+    (p,l) = np.shape(B)
+    if p != m :
+        raise ValueError ("Matrices de tailles non compatibles")
+    else :
+        prod = np.zeros((n,l))
+        for i in range(n):
+            for j in range(l):
+                for k in range(p):
+                    prod[i][j] = prod[i][j] + A[i][k]*B[k][j]
+        return prod 
 
 def matadd(A=np.array,B=np.array):
     """réalise l'addtion de la matrice A et B"""
@@ -65,11 +75,12 @@ def module(z):
     """renvoie le module de z"""
     return np.abs(z)
 
-def integ(f,a=float,b=float,it=1000):
-    """réalise l'intégrale de f sur a,b avec la méthode des rectangles, par défaut it (="itération")=1000"""
+def integ(f,a=float,b=float,it=10**3):
+    """réalise l'intégrale de f sur a,b avec la méthode de simpson, par défaut it (="itération")=1000"""
     S=0
-    for i in range(it):
-        S += (1/it)*(f(i*(a-b)/it))
+    e =(b-a)/it
+    for k in range(it):
+        S += (e/6)*( f(k*e) + f((k+1)*e) + 4*f((2*k+1)*e/2) )
     return S 
     
 ### Fonctions du problème
@@ -79,7 +90,7 @@ longueur_du_parcours = 20 # Longueur du parcours étudié
 
 ## à Optimiser
 
-def Phi(P=np.array):
+def Phi(P = np.linspace):
     """fonctions rayon moyen"""
     def A(x):
         F=fun_p(P)
@@ -87,7 +98,7 @@ def Phi(P=np.array):
     
     return integ(A,0,1)
 
-def dPhi(P=np.array, k=float):
+def dPhi(P = np.linspace, k=float):
     """renvoie la différentiel selon e_k de Phi de P"""
     p = fun_p(P) 
     if k> 2*deg+1 or k<0:
@@ -97,65 +108,61 @@ def dPhi(P=np.array, k=float):
         ex = k//2
 
         def F(x):
-            ep = 0
             if module(p(x)) == 0: 
-                ep = 10**(-3)
-            return (x**ex)*((p(x)).real)/(module(p(x+ep)))
+                return 10**(-9)
+            return (x**ex)*((p(x)).real)/(module(p(x)))
         
     elif k%2 == 1 :
         ex = k//2 +1
 
         def F(x):
-            ep = 0
             if module(p(x)) == 0: 
-                ep = 10**(-3)
-            return (x**ex)*((p(x)).imag)/(module(p(x+ep)))
-        
+                return 10**(-9)
+            return (x**ex)*((p(x)).imag)/(module(p(x)))
     return integ(F,0,1)
 
-def d2Phi(P=np.array,k=float,l=float):
+def d2Phi(P = np.linspace,k=float,l=float):
     """renvoie la différentiel selon e_k et e_l de Phi de P"""
 
     p = fun_p(P) 
     if (k> 2*deg +1 or k<0) or (l> 2*deg +1 or l<0) :
         raise ValueError("indice k ou l trop grand ou trop petit")
     
-    elif k%2==0 and l%2 ==1: 
+    elif k%2==0 and l%2 ==0: 
         ex = k//2 + l//2
         def F(x):
             ep = 0
             if module(p(x)) == 0: 
-                ep = 10**(-3)
-            return -(x**(ex))*((p(x).imag)**2)/((module(p(x+ep)))**3)
+                return 10**(-9)
+            return -(x**(ex))*((p(x).imag)**2)/((module(p(x)))**3)
         
     elif k%2 == 1 and l%2 == 1:
         ex = k//2 + l//2 + 2
         def F(x):
             ep = 0
             if module(p(x)) == 0: 
-                ep = 10**(-3)
-            return -(x**(ex))*((p(x).imag)*(p(x).real))/((module(p(x+ep)))**3)
-        
+                return 10**(-9)
+            return -(x**(ex))*((p(x).imag)*(p(x).real))/((module(p(x)))**3)
+
     elif (k%2==0 and l%2==1) or (k%2==1 and l%2==0): 
         ex = k//2 + l//2 + 1
         def F(x):
             ep = 0
             if module(p(x)) == 0: 
                 ep = 10**(-3)
-            return -(x**(ex))*((p(x).real)**2)/((module(p(x+ep)))**3)     
-        
-    return integ(F,0,1)
+            return -(x**(ex))*((p(x).real)**2)/((module(p(x+ep)))**3)   
+    return integ(F,0,1)     
 
 ## Contraintes
 
 #Contrainte de longueur
-def Psi(P=np.array):
+def Psi(P = np.linspace):
     def A(x):
         F = fun_p(dp(P))
         return module(F(x))
     return integ(A,0,1)-longueur_du_parcours
 
-def dPsi(P=np.array,k=float):
+def dPsi(P = np.linspace,k=float):
     A = fun_p(dp(P)) 
 
     if k > 2*deg+1 or k<0 :
@@ -167,22 +174,20 @@ def dPsi(P=np.array,k=float):
     elif k%2==0 :
         ex = k//2
         def F(x):
-            ep = 0
             if module(A(x)) == 0: 
-                ep = 10**(-3)
-            return ex*(x**(ex-1))*((A(x)).real)/(module(A(x+ep)))
+                return 10**(-9)
+            return ex*(x**(ex-1))*((A(x)).real)/(module(A(x)))
         
     elif k%2==1:
         ex = k//2 +1
         def F(x):
-            ep = 0
             if module(A(x)) == 0: 
-                ep = 10**(-3)
-            return (ex)*(x**(ex-1))*((A(x)).imag)/(module(A(x+ep)))
+                return 10**(-9)
+            return (ex)*(x**(ex-1))*((A(x)).imag)/(module(A(x)))
         
     return integ(F,0,1)
 
-def d2Psi(P=np.array,l=float,k=float):
+def d2Psi(P = np.linspace,l=float,k=float):
     A = fun_p(dp(P))
 
     if k>2*deg+1 or k<0 or  l>2*deg+1 or l<0:
@@ -195,39 +200,36 @@ def d2Psi(P=np.array,l=float,k=float):
         ex = k//2 + l//2
         facteur = (k//2) * (l//2)
         def F(x):
-            ep = 0
             if module(A(x)) == 0: 
-                ep = 10**(-3)
-            return -(facteur)*(x**(ex-2))*((A(x).imag)**2)/((module(A(x+ep)))**3)
+                return 10**(-9)
+            return -(facteur)*(x**(ex-2))*((A(x).imag)**2)/((module(A(x)))**3)
         
     elif k%2==1 and l%2==1:
         ex = k//2 + l//2 +2
         facteur = ( 1 + k//2) * ( 1 + l//2 )
         def F(x):
-            ep = 0
             if module(A(x)) == 0: 
-                ep = 10**(-3)
-            return -(facteur)*(x**(ex-2))*((A(x).real)**2)/((module(A(x+ep)))**3)
+                return 10**(-9)
+            return -(facteur)*(x**(ex-2))*((A(x).real)**2)/((module(A(x)))**3)
         
     elif (k%2==0 and l%2==1) or (k%2==1 and l%2==0): 
         ex = k//2 + l//2 +1
         facteur = ( k%2 + k//2) * ( l%2 + l//2 )
 
         def F(x):
-            ep = 0
             if module(A(x)) == 0: 
-                ep = 10**(-3)
-            return -(facteur)*(x**(ex-2))*((A(x).imag)*(A(x).real))/((module(A(x+ep)))**3)
+                return 10**(-9)
+            return -(facteur)*(x**(ex-2))*((A(x).imag)*(A(x).real))/((module(A(x)))**3)
        
     return integ(F,0,1)
 
 #Contrainte de cyclicité 
 
-def Omega(P=np.array):
+def Omega(P = np.linspace):
     p = fun_p(P)
     return (module(p(1)-p(0)))**2
 
-def dOmega(P=np.array,k=float):
+def dOmega(P = np.linspace,k=float):
     """renvoie la différentiel selon e_k de Omega de P"""
     p = fun_p(P)
     if k > 2*deg+1 or k<0 :
@@ -242,7 +244,7 @@ def dOmega(P=np.array,k=float):
     elif k%2==1:
         return 2*(p(1)-p(0)).imag 
 
-def d2Omega(P=np.array,l=float,k=float):
+def d2Omega(P = np.linspace,l=float,k=float):
     """renvoie la différentiel selon e_k et e_l de Omega de P"""
     if k>2*deg+1 or k<0 or  l>2*deg+1 or l<0:
         raise ValueError("indice k ou l trop grand ou trop petit")
@@ -255,19 +257,19 @@ def d2Omega(P=np.array,l=float,k=float):
     
 ## Matrices et fonction Lagrangienne
 
-def Lagrangien(P=np.array,lambda1=float,lambda2=float):
-    Lag = np.zeros((1,2*deg+4))
+def Lagrangien(P = np.linspace,lambda1=float,lambda2=float):
+    Lag = np.zeros((2*deg+4,1))
 
     for i in range(2*deg+2):
-        Lag[0][i] = dPhi(P,i) - lambda1*dPsi(P,i) - lambda2*dOmega(P,i)
+        Lag[i][0] = dPhi(P,i) - lambda1*dPsi(P,i) - lambda2*dOmega(P,i)
 
-    Lag[0][2*deg + 2] = Psi(P)
-    Lag[0][2*deg + 3] = Omega(P)
+    Lag[2*deg + 2][0] = Psi(P)
+    Lag[2*deg + 3][0] = Omega(P)
 
     return Lag
 
 
-def Jacob(P=np.array,lambda1=float,lambda2=float):
+def Jacob(P = np.linspace,lambda1=float,lambda2=float):
 
     Jacobienne = np.zeros((2*deg+4,2*deg+4))
 
@@ -285,28 +287,34 @@ def Jacob(P=np.array,lambda1=float,lambda2=float):
 
 ### Résolution
 
-
+solution = []
 
 ##Algorithme de Raphson Newton
 
-def Raphson_Newton(P0 = np.array, lambda1 =float, lambda2 = float , it = 50 ):
-    X = np.zeros((1,2*deg+4))
+def Raphson_Newton(P0 = np.linspace, lambda1 =float, lambda2 = float , it = 50 ):
+    X = np.zeros((2*deg+4,1))
     for i in range(deg+1):
-        X[0][2*i]= (P0[i//2]).real
-        X[0][2*i+1]= (P0[i//2]).imag
-    X[0][2*deg+2] = lambda1
-    X[0][2*deg+3] = lambda2
+        X[2*i][0]= (P0[i//2]).real
+        X[2*i+1][0]= (P0[i//2]).imag
+    X[2*deg+2][0] = lambda1
+    X[2*deg+3][0] = lambda2
 
     for i in range(it):
-        X =  X + scal(-1,matprod(matinv(Jacob(P0,lambda1,lambda2)),Lagrangien(P0,lambda1,lambda2)))
+        X =  X + scal(-1,matprod( (matinv(Jacob(P0,lambda1,lambda2))) , (Lagrangien(P0,lambda1,lambda2)) ))
 
         for i in range(deg+1):
-            P0[i] = complex(X[0][2*i] , X[0][2*i])
-            lambda1 = X[0][2*deg+2]
-            lambda2 = X[0][2*deg+3]
-
+            P0[i] = complex(X[2*i][0] , X[2*i][0])
+            lambda1 = X[2*deg+2][0]
+            lambda2 = X[2*deg+3][0]
+        print(satis_facteur(P0))
+        solution = P0
     return P0
 
 #seed obtenue par interpolation  d'une solution discrète
 #[complex(0.1,0.1),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
 #fonctionne pour, deg =8
+
+def satis_facteur(P):
+    print(f"Cyclcité : \n distance entre P(1) et P(0) est {np.sqrt(Omega(P))}")
+    print(f"Longueur : \n La longueur voulue est {longueur_du_parcours}, le parcours fait {Psi(P)+longueur_du_parcours} soit un différence de {Psi(P)}")
+    print(f"Rayon moyen : \n le rayon moyen à l'origine du plan complexe de P sur [0,1] est {Phi(P)}")
