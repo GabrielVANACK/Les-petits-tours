@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.integrate as integrate
 
 ###Généralités
 
@@ -69,26 +70,19 @@ def scal(mu=float,A=np.array):
 
 def matinv(A=np.array):
     print(np.linalg.det(A))
-    if np.linalg.det(A)==0 : 
-        raise ValueError ("Determinant nul matrice non inversible")
-    else :
-        return np.linalg.inv(A)
+    return np.linalg.inv(A)
 
 def module(z):
     """renvoie le module de z"""
     return np.abs(z)
 
-def integ(f,a=float,b=float,it=10**3):
+def integ(f,a=float,b=float):
     """réalise l'intégrale de f sur a,b avec la méthode de simpson, par défaut it (="itération")=1000"""
-    S=0
-    e =(b-a)/it
-    for k in range(it):
-        S += (e/6)*( f(k*e) + f((k+1)*e) + 4*f((2*k+1)*e/2) )
-    return S 
+    return integrate.quad(lambda x:f(x), a, b)[0]
     
 ### Fonctions du problème
 
-deg = 3 # degré maximal des polynomes étudidés
+deg = 8 # degré maximal des polynomes étudidés
 longueur_du_parcours = 20 # Longueur du parcours étudié
 
 ## à Optimiser
@@ -263,14 +257,14 @@ def Jacob(P = np.array,lambda1=float,lambda2=float):
         Jacobienne[i][2*deg+3] = dOmega(P,i)
         Jacobienne[2*deg+3][i] = dOmega(P,i)
     
-    print(Jacobienne)
+    #print(Jacobienne)
     return Jacobienne 
 
 ### Résolution
 
-##Algorithme de Raphson Newton
+##Algorithme de Raphson Newton , p.24 (pdf)
 
-def Raphson_Newton(P0 = np.linspace, lambda1 =float, lambda2 = float , it = 50 ):
+def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
     X = np.zeros((2*deg+4,1))
     for i in range(deg+1):
         X[2*i][0]= (P0[i]).real
@@ -279,20 +273,76 @@ def Raphson_Newton(P0 = np.linspace, lambda1 =float, lambda2 = float , it = 50 )
     X[2*deg+3][0] = lambda2
 
     for i in range(it):
-        X =  X + scal(-1,matprod( (matinv(Jacob(P0,lambda1,lambda2))) , (Lagrangien(P0,lambda1,lambda2)) ))
+        J =Jacob(P0,lambda1,lambda2)
+        deltaX = np.linalg.solve(matadd(J, scal((1/np.linalg.det(J))**6,np.identity(2*deg+4))),scal(-1,Lagrangien(P0,lambda1,lambda2)))
+        X = X + deltaX
 
         for i in range(deg+1):
             P0[i] = complex(X[2*i][0] , X[2*i+1][0])
         lambda1 = X[2*deg+2][0]
         lambda2 = X[2*deg+3][0]
         print(satis_facteur(P0))
-    return P0
+    return (P0,lambda1,lambda2)
 
 #seed obtenue par interpolation  d'une solution discrète
 #[complex(0.1,0.1),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
 #fonctionne pour, deg =8
-
+ 
 def satis_facteur(P):
     print(f"Cyclcité : \n distance entre P(1) et P(0) est {np.sqrt(Omega(P))}")
     print(f"Longueur : \n La longueur voulue est {longueur_du_parcours}, le parcours fait {Psi(P)+longueur_du_parcours} soit un différence de {Psi(P)}")
     print(f"Rayon moyen : \n le rayon moyen à l'origine du plan complexe de P sur [0,1] est {Phi(P)}")
+
+
+## Autre méthode : page 114 du livre springer, page 127 pour le pdf
+
+def T(X):
+    (lambda2, lambda1) = (0,0)
+    P = np.ndarray.flatten(np.full((1,deg+1), 0+0j)) 
+
+    for i in range(deg+1):
+        P[i] = complex(X[2*i][0] , X[2*i+1][0])
+        lambda1 = X[2*deg+2][0]
+        lambda2 = X[2*deg+3][0]
+    
+    return scal(1/2,matprod(np.transpose(Lagrangien(P, lambda1 , lambda2)), Lagrangien(P, lambda1 , lambda2)))
+
+def find_steplength(x,dx ,s = float ,ls = list ,k=0.5 ):
+    l=len(ls)
+    m= T(x)
+
+    if ls[l-2]<= ls[l-1]:
+        s= min(max(ls), s/k)
+
+    while T(matadd(x,scal(s,dx)))> m :
+        s = k*s 
+    ls.append(s)
+    return s
+
+
+
+def Steepest_descent(P = np.array,lambda1=float,lambda2=float, it = 50): 
+
+    #Initialisation
+    X = np.zeros((2*deg+4,1))
+    for i in range(deg+1):
+        X[2*i][0]= (P[i]).real
+        X[2*i+1][0]= (P[i]).imag
+    X[2*deg+2][0] = lambda1
+    X[2*deg+3][0] = lambda2
+    s=10
+    ls = [s] #list des s
+
+    #Itération
+    for i in range(it):
+        deltaX =scal(-1,matprod(np.transpose(Jacob(P, lambda1 , lambda2)), Lagrangien(P, lambda1 , lambda2)))
+        s = find_steplength(X,deltaX,s,ls)
+        print(s,ls)
+        X = matadd(X,scal(s,deltaX))
+
+        for i in range(deg+1):
+            P[i] = complex(X[2*i][0] , X[2*i+1][0])
+            lambda1 = X[2*deg+2][0]
+            lambda2 = X[2*deg+3][0]
+        print(satis_facteur(P))
+    return (P,lambda1,lambda2)
