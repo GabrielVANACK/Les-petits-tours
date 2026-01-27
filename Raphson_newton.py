@@ -84,6 +84,7 @@ def integ(f,a=float,b=float):
 
 deg = 8 # degré maximal des polynomes étudidés
 longueur_du_parcours = 20 # Longueur du parcours étudié
+reg = 10 #correction pour assurer que Phi soit coercif
 
 ## à Optimiser
 
@@ -91,13 +92,15 @@ def Phi(P = np.array):
     """fonctions rayon moyen"""
     def A(x):
         F=fun_p(P)
-        return module(F(x))
+        d2F = fun_p(dp(dp(P)))
+        return module(F(x)) + reg*(module(d2F(x)))**2
     
     return integ(A,0,1)
 
 def dPhi(P = np.array, k=float):
     """renvoie la différentiel selon e_k de Phi de P"""
-    p = fun_p(P) 
+    p = fun_p(P)
+    d2p =fun_p(dp(dp(P)))
     if k> 2*deg+1 or k<0:
         raise ValueError("indice k trop grand ou trop petit")
     
@@ -105,18 +108,17 @@ def dPhi(P = np.array, k=float):
         ex = k//2
 
         def F(x):
-            return (x**ex)*((p(x)).real)/(module(p(x)))
+            return (x**ex)*((p(x)).real)/(module(p(x))) + reg*(ex-1)*ex*(x**(ex-2))*(d2p(x).real)
         
     elif k%2 == 1 :
         ex = k//2 
 
         def F(x):
-            return (x**ex)*((p(x)).imag)/(module(p(x)))
+            return (x**ex)*((p(x)).imag)/(module(p(x)))  + reg*(ex-1)*ex*(x**(ex-2))*(d2p(x).imag)
     return integ(F,0,1)
 
 def d2Phi(P = np.array,k=float,l=float):
     """renvoie la différentiel selon e_k et e_l de Phi de P"""
-
     p = fun_p(P) 
     if (k> 2*deg +1 or k<0) or (l> 2*deg +1 or l<0) :
         raise ValueError("indice k ou l trop grand ou trop petit")
@@ -124,17 +126,17 @@ def d2Phi(P = np.array,k=float,l=float):
     elif k%2==0 and l%2 ==0: 
         ex = k//2 + l//2
         def F(x):
-            return -(x**(ex))*((p(x).imag)**2)/((module(p(x)))**3)
+            return -(x**(ex))*((p(x).imag)**2)/((module(p(x)))**3) + reg*((ex-1)*ex*(x**(ex-2)))**2
         
     elif k%2 == 1 and l%2 == 1:
         ex = k//2 + l//2
         def F(x):
-            return -(x**(ex))*((p(x).real)**2)/((module(p(x)))**3)
+            return -(x**(ex))*((p(x).real)**2)/((module(p(x)))**3) + reg*((ex-1)*ex*(x**(ex-2)))**2
 
     elif (k%2==0 and l%2==1) or (k%2==1 and l%2==0): 
         ex = k//2 + l//2
         def F(x):
-            return -(x**(ex))*((p(x).real)*(p(x).imag))/((module(p(x)))**3)   
+            return -(x**(ex))*((p(x).real)*(p(x).imag))/((module(p(x)))**3)  
     return integ(F,0,1)     
 
 ## Contraintes
@@ -233,29 +235,29 @@ def d2Omega(P = np.array,l = float ,k = float):
 ## Matrices et fonction Lagrangienne
 
 def Lagrangien(P = np.array ,lambda1 = float ,lambda2 = float):
-    Lag = np.zeros((2*deg+4,1))
+    Lag = np.zeros((2*deg,1))
 
-    for i in range(2*deg+2):
-        Lag[i][0] = dPhi(P,i) - lambda1*dPsi(P,i) - lambda2*dOmega(P,i)
+    for i in range(4,2*deg+2):
+        Lag[i-4][0] = dPhi(P,i) - lambda1*dPsi(P,i) - lambda2*dOmega(P,i)
 
-    Lag[2*deg + 2][0] = Psi(P)
-    Lag[2*deg + 3][0] = Omega(P)
+    Lag[2*deg-2][0] = Psi(P)
+    Lag[2*deg -1][0] = Omega(P)
 
     return Lag
 
 def Jacob(P = np.array,lambda1=float,lambda2=float):
 
-    Jacobienne = np.zeros((2*deg+4,2*deg+4))
+    Jacobienne = np.zeros((2*deg,2*deg))
 
-    for i in range(2*deg+2):
-        for j in range(2*deg+2):
-            Jacobienne[i][j] = d2Phi(P,i,j) - lambda1*d2Psi(P,i,j) - lambda2*d2Omega(P,i,j)
+    for i in range(4,2*deg):
+        for j in range(4,2*deg):
+            Jacobienne[i-4][j-4] = d2Phi(P,i,j) - lambda1*d2Psi(P,i,j) - lambda2*d2Omega(P,i,j)
     
-    for i in range(2*deg+2):
-        Jacobienne[i][2*deg+2] = dPsi(P,i)
-        Jacobienne[2*deg+2][i] = dPsi(P,i)
-        Jacobienne[i][2*deg+3] = dOmega(P,i)
-        Jacobienne[2*deg+3][i] = dOmega(P,i)
+    for i in range(2*deg):
+        Jacobienne[i][2*deg-2] = dPsi(P,i)
+        Jacobienne[2*deg-2][i] = dPsi(P,i)
+        Jacobienne[i][2*deg-1] = dOmega(P,i)
+        Jacobienne[2*deg-1][i] = dOmega(P,i)
     
     #print(Jacobienne)
     return Jacobienne 
@@ -263,29 +265,83 @@ def Jacob(P = np.array,lambda1=float,lambda2=float):
 ### Résolution
 
 ##Algorithme de Raphson Newton , p.24 (pdf)
+mu =10**(-3)
 
 def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
-    X = np.zeros((2*deg+4,1))
-    for i in range(deg+1):
-        X[2*i][0]= (P0[i]).real
-        X[2*i+1][0]= (P0[i]).imag
-    X[2*deg+2][0] = lambda1
-    X[2*deg+3][0] = lambda2
+    X = np.zeros((2*deg,1))
+    for i in range(deg-1):
+        X[2*i][0]= (P0[i+2]).real
+        X[2*i+1][0]= (P0[i+2]).imag
+    X[2*deg-2][0] = lambda1
+    X[2*deg-1][0] = lambda2
+
+    global mu
+    deltaX =np.zeros((2*deg,1))
 
     for i in range(it):
         J =Jacob(P0,lambda1,lambda2)
-        deltaX = np.linalg.solve(matadd(J, scal((1/np.linalg.det(J))**6,np.identity(2*deg+4))),scal(-1,Lagrangien(P0,lambda1,lambda2)))
-        X = X + deltaX
+        Jt = np.transpose(J)
+        L = scal(-1,Lagrangien(P0,lambda1,lambda2))
 
-        for i in range(deg+1):
-            P0[i] = complex(X[2*i][0] , X[2*i+1][0])
-        lambda1 = X[2*deg+2][0]
-        lambda2 = X[2*deg+3][0]
-        print(satis_facteur(P0))
+        B = matprod(Jt,L)
+        A = matprod(Jt,J) + mu*np.diag(np.diag(matprod(Jt, J)))
+        deltaX = np.linalg.solve(A,B)
+
+           
+        if T(X+deltaX)<T(X):
+            mu = mu/(10)
+            X = X + deltaX
+
+        elif mu> 10**(300):
+            mu=10**(-100)
+            print("mu devenu trop grand remise dans des limites raisonnable")
+        else : mu = mu*(10) 
+        print("mu",mu)
+
+        
+        #print(deltaX)
+
+        for i in range(deg-1):
+            P0[i+2] = complex(X[2*i][0] , X[2*i+1][0])
+        P0[0]= complex(0,0)
+        P0[1]= complex(0,0)
+        lambda1 = X[2*deg-2][0]
+        lambda2 = X[2*deg-1][0]
+        #print(P0)
+        #print(satis_facteur(P0))
+        print("||Lag||",np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
     return (P0,lambda1,lambda2)
 
+def cv_reg(P0 = np.array, lambda1 = float, lambda2 = float , it = 20 ):
+    for i in range(it):
+        global mu 
+        mu = 10**(-3)
+        Lag_norm_mem = [0,-1]
+        while abs(Lag_norm_mem[1] - Lag_norm_mem[0]) > 10**(-7):
+            (P0,lambda1,lambda2) = Raphson_Newton(P0,lambda1,lambda2,25)
+            Lag_norm_mem[0] = Lag_norm_mem[1]
+            Lag_norm_mem[1] = np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2)
+        global reg 
+        reg = reg/2
+
+    return (P0,lambda1,lambda2)
+
+def cv_continue(P0 = np.array, lambda1 = float, lambda2 = float , deg_max = int):   
+    global deg, reg
+    original_deg = deg
+    for i in range(deg, deg_max):
+        deg = i
+        print(f"deg des polynômes étuidiés {deg}")
+        reg = 10
+        (P0, lambda1, lambda2) = cv_reg(P0, lambda1, lambda2)
+        
+        P0.append(complex(0,0))
+
+    deg = original_deg
+    return (P0, lambda1, lambda2)
+
 #seed obtenue par interpolation  d'une solution discrète
-#[complex(0.1,0.1),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
+seed=[complex(0.1,0.1),complex(35.1,140),complex(-1113,-2660),complex(10447,18904),complex(-45420,-67083),complex(105176,131527),complex(-133621,-144907),complex(87797,84052),complex(-23301,-19973)]
 #fonctionne pour, deg =8
  
 def satis_facteur(P):
@@ -300,49 +356,13 @@ def T(X):
     (lambda2, lambda1) = (0,0)
     P = np.ndarray.flatten(np.full((1,deg+1), 0+0j)) 
 
-    for i in range(deg+1):
-        P[i] = complex(X[2*i][0] , X[2*i+1][0])
-        lambda1 = X[2*deg+2][0]
-        lambda2 = X[2*deg+3][0]
+    for i in range(deg-1):
+        P[i+2] = complex(X[2*i][0] , X[2*i+1][0])
+        lambda1 = X[2*deg-2][0]
+        lambda2 = X[2*deg-1][0]
+
+    L  = Lagrangien(P, lambda1 , lambda2)
+    Lt = np.transpose(Lagrangien(P, lambda1 , lambda2))
     
-    return scal(1/2,matprod(np.transpose(Lagrangien(P, lambda1 , lambda2)), Lagrangien(P, lambda1 , lambda2)))
+    return scal(1/2,matprod(Lt,L)) 
 
-def find_steplength(x,dx ,s = float ,ls = list ,k=0.5 ):
-    l=len(ls)
-    m= T(x)
-
-    if ls[l-2]<= ls[l-1]:
-        s= min(max(ls), s/k)
-
-    while T(matadd(x,scal(s,dx)))> m :
-        s = k*s 
-    ls.append(s)
-    return s
-
-
-
-def Steepest_descent(P = np.array,lambda1=float,lambda2=float, it = 50): 
-
-    #Initialisation
-    X = np.zeros((2*deg+4,1))
-    for i in range(deg+1):
-        X[2*i][0]= (P[i]).real
-        X[2*i+1][0]= (P[i]).imag
-    X[2*deg+2][0] = lambda1
-    X[2*deg+3][0] = lambda2
-    s=10
-    ls = [s] #list des s
-
-    #Itération
-    for i in range(it):
-        deltaX =scal(-1,matprod(np.transpose(Jacob(P, lambda1 , lambda2)), Lagrangien(P, lambda1 , lambda2)))
-        s = find_steplength(X,deltaX,s,ls)
-        print(s,ls)
-        X = matadd(X,scal(s,deltaX))
-
-        for i in range(deg+1):
-            P[i] = complex(X[2*i][0] , X[2*i+1][0])
-            lambda1 = X[2*deg+2][0]
-            lambda2 = X[2*deg+3][0]
-        print(satis_facteur(P))
-    return (P,lambda1,lambda2)
