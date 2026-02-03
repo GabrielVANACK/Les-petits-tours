@@ -320,24 +320,24 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
 def cv_reg(P0 = np.array, lambda1 = float, lambda2 = float):
     # Pour améliorer la convergence je vérifie que les itérations ne sont pas trop proche, bien sûr ça suppose qu'il n'y ait pas de "plateau" dans la convergence, mais bon entre ça et faire 20 itérations bêtement je sais pas quoi faire
     i=0
-    memoir_de_convergence = [0]*5
+    memoir_de_convergence = [0 if i == 0 else 1 for i in range(5)]
     while abs(memoir_de_convergence[4] - memoir_de_convergence[0]) > 10**(-5):
         global mu 
         global reg 
         mu = 10**(-3)
-        Lag_norm_mem = [0,1,2]
+        Lag_norm_mem = [0,1,float('inf')]
         trac = 0
         while abs(Lag_norm_mem[2] - Lag_norm_mem[0]) > 10**(-5):
-            (P0,lambda1,lambda2) = Raphson_Newton(P0,lambda1,lambda2,50)
+            (P0,lambda1,lambda2) = Raphson_Newton(P0,lambda1,lambda2,35)
             trac +=50
             liste_shift(Lag_norm_mem, np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
 
-            print(f"Avec le facteur {np.round(reg,3)}, {trac} itérations :  ||Lag||",Lag_norm_mem[1])
-        print(f"\n Fin de boucle {i}-eme) ||Lag||",Lag_norm_mem[1])
+            print(f"Avec le facteur {np.round(reg,3)/(10**(int(np.log(reg)/(np.log(10)))))}x 10^{ (int(np.log(reg)/(np.log(10))))}, {trac} itérations :  ||Lag||",Lag_norm_mem[1])
+        print(f" Fin de boucle {i}-eme) ||Lag|| ",Lag_norm_mem[1],"\n")
 
         liste_shift(memoir_de_convergence, np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
 
-        reg = reg/(10 + 1/(10**(-30)+abs(Lag_norm_mem[1] - Lag_norm_mem[0]))) #Diminue plus vite si la liste des lagrangiens sont très proches
+        reg = reg/(10 + 1/(10**(-30)+abs(memoir_de_convergence[4] - memoir_de_convergence[3]))) #Diminue plus vite si la liste des lagrangiens sont très proches
         i+=1
 
     return (P0,lambda1,lambda2)
@@ -347,7 +347,7 @@ def cv_continue(P0 = np.array, lambda1 = float, lambda2 = float , deg_max = int)
     original_deg = deg
     for i in range(deg, deg_max):
         deg = i
-        print(f"Degré des polynômes étuidiés : {deg} \n \n")
+        print(f"\n \n Degré des polynômes étudiés : {deg}\n")
         reg = 10
         (P0, lambda1, lambda2) = cv_reg(P0, lambda1, lambda2)
         
