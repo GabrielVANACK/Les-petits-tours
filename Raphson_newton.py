@@ -3,6 +3,14 @@ import scipy.integrate as integrate
 
 ###Généralités
 
+def liste_shift(l,el):
+    """prend un élèment el en entrée, l'ajoute au bout de la liste et supprime le premier élèment de la liste. Plante pour des listes de taille 1"""
+
+    n = len(l)
+    for i in range(n-1):
+        l[i]=l[i+1]
+    l[n-1]= el
+
 def polprod(P = np.linspace,Q=np.array):
     """réalise le produit de cauchy des polynômes P et Q sous forme de liste de coefficients"""
     n=len(P)
@@ -84,7 +92,7 @@ def integ(f,a=float,b=float):
 
 deg = 8 # degré maximal des polynomes étudidés
 longueur_du_parcours = 20 # Longueur du parcours étudié
-reg = 10 #correction pour assurer que Phi soit coercif
+reg = 3 #correction pour assurer que Phi soit coercif
 
 ## à Optimiser
 
@@ -276,7 +284,6 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
     X[2*deg-1][0] = lambda2
 
     global mu
-    deltaX =np.zeros((2*deg,1))
 
     for i in range(it):
         J =Jacob(P0,lambda1,lambda2)
@@ -296,9 +303,7 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
             mu=10**(-100)
             print("mu devenu trop grand remise dans des limites raisonnable")
         else : mu = mu*(10) 
-        print("mu",mu)
-
-        
+        #print("mu",mu)
         #print(deltaX)
 
         for i in range(deg-1):
@@ -309,20 +314,31 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
         lambda2 = X[2*deg-1][0]
         #print(P0)
         #print(satis_facteur(P0))
-        print("||Lag||",np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
+        #print("||Lag||",np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
     return (P0,lambda1,lambda2)
 
-def cv_reg(P0 = np.array, lambda1 = float, lambda2 = float , it = 20 ):
-    for i in range(it):
+def cv_reg(P0 = np.array, lambda1 = float, lambda2 = float):
+    # Pour améliorer la convergence je vérifie que les itérations ne sont pas trop proche, bien sûr ça suppose qu'il n'y ait pas de "plateau" dans la convergence, mais bon entre ça et faire 20 itérations bêtement je sais pas quoi faire
+    i=0
+    memoir_de_convergence = [0]*5
+    while abs(memoir_de_convergence[4] - memoir_de_convergence[0]) > 10**(-5):
         global mu 
-        mu = 10**(-3)
-        Lag_norm_mem = [0,-1]
-        while abs(Lag_norm_mem[1] - Lag_norm_mem[0]) > 10**(-7):
-            (P0,lambda1,lambda2) = Raphson_Newton(P0,lambda1,lambda2,25)
-            Lag_norm_mem[0] = Lag_norm_mem[1]
-            Lag_norm_mem[1] = np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2)
         global reg 
-        reg = reg/2
+        mu = 10**(-3)
+        Lag_norm_mem = [0,1,2]
+        trac = 0
+        while abs(Lag_norm_mem[2] - Lag_norm_mem[0]) > 10**(-5):
+            (P0,lambda1,lambda2) = Raphson_Newton(P0,lambda1,lambda2,50)
+            trac +=50
+            liste_shift(Lag_norm_mem, np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
+
+            print(f"Avec le facteur {np.round(reg,3)}, {trac} itérations :  ||Lag||",Lag_norm_mem[1])
+        print(f"\n Fin de boucle {i}-eme) ||Lag||",Lag_norm_mem[1])
+
+        liste_shift(memoir_de_convergence, np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
+
+        reg = reg/(10 + 1/(10**(-30)+abs(Lag_norm_mem[1] - Lag_norm_mem[0]))) #Diminue plus vite si la liste des lagrangiens sont très proches
+        i+=1
 
     return (P0,lambda1,lambda2)
 
@@ -331,7 +347,7 @@ def cv_continue(P0 = np.array, lambda1 = float, lambda2 = float , deg_max = int)
     original_deg = deg
     for i in range(deg, deg_max):
         deg = i
-        print(f"deg des polynômes étuidiés {deg}")
+        print(f"Degré des polynômes étuidiés : {deg} \n \n")
         reg = 10
         (P0, lambda1, lambda2) = cv_reg(P0, lambda1, lambda2)
         
