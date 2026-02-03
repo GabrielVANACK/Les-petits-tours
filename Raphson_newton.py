@@ -319,17 +319,17 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ):
 
 def cv_reg(P0 = np.array, lambda1 = float, lambda2 = float):
     # Pour améliorer la convergence je vérifie que les itérations ne sont pas trop proche, bien sûr ça suppose qu'il n'y ait pas de "plateau" dans la convergence, mais bon entre ça et faire 20 itérations bêtement je sais pas quoi faire
+    global reg
     i=0
     memoir_de_convergence = [0 if i == 0 else 1 for i in range(5)]
-    while abs(memoir_de_convergence[4] - memoir_de_convergence[0]) > 10**(-5):
+    while abs(memoir_de_convergence[4] - memoir_de_convergence[0]) > 10**(-5) and reg > 10**(-9):
         global mu 
-        global reg 
         mu = 10**(-3)
         Lag_norm_mem = [0,1,float('inf')]
         trac = 0
         while abs(Lag_norm_mem[2] - Lag_norm_mem[0]) > 10**(-5):
             (P0,lambda1,lambda2) = Raphson_Newton(P0,lambda1,lambda2,35)
-            trac +=50
+            trac +=35
             liste_shift(Lag_norm_mem, np.linalg.norm(Lagrangien(P0,lambda1,lambda2),2))
 
             print(f"Avec le facteur {np.round(reg,3)/(10**(int(np.log(reg)/(np.log(10)))))}x 10^{ (int(np.log(reg)/(np.log(10))))}, {trac} itérations :  ||Lag||",Lag_norm_mem[1])
