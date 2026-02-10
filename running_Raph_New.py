@@ -47,9 +47,9 @@ def main():
         P0, lambda1, lambda2, current_deg, deg_max = initial_state()
         save_state(P0, lambda1, lambda2, current_deg, deg_max)
 
-    for d in range(current_deg + 1, deg_max + 1):
+    for d in range(current_deg , deg_max + 1):
         print(f"\n=== Calcul pour degré {d} ===")
-        P0, lambda1, lambda2 = cv_continue(P0, lambda1, lambda2, d)
+        P0, lambda1, lambda2 = cv_continue(P0, lambda1, lambda2, d+1,d )
         save_state(P0, lambda1, lambda2, d, deg_max)
         print(f"Degré {d} sauvegardé.")
 
