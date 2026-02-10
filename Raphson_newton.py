@@ -322,7 +322,7 @@ def cv_reg(P0 = np.array, lambda1 = float, lambda2 = float):
     global reg
     i=0
     memoir_de_convergence = [0 if i == 0 else 1 for i in range(5)]
-    while abs(memoir_de_convergence[4] - memoir_de_convergence[0]) > 10**(-5) and reg > 10**(-9):
+    while abs(memoir_de_convergence[4] - memoir_de_convergence[0]) > 10**(-5) or reg > 10**(-9):
         global mu 
         mu = 10**(-3)
         Lag_norm_mem = [0,1,float('inf')]
