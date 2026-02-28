@@ -39,6 +39,22 @@ def poladd(P = np.array,Q=np.array):
 
     return PplusQ
 
+def polcomp(P, Q):
+    """Retourne la composition P(Q(x)). P et Q sont des listes de coefficients complexes."""
+
+    PoQ = np.ndarray.flatten(np.full((1,1), 0+0j)) 
+
+    # Polynomiale courante : Q(x)^k, commence à Q(x)^0 = 1
+    current_power = [1]
+
+    for coeff in P:
+        # Ajoute coeff * current_power au résultat
+        PoQ = poladd(PoQ, polprod([coeff], current_power))
+        # Met à jour current_power = current_power * Q
+        current_power = polprod(current_power, Q)
+
+    return PoQ
+
 def fun_p(P = np.array):
     """renvoie la fonction polynomiale du polynôme définie pas la liste de ses coefficients P"""
     n = len(P)
@@ -238,7 +254,52 @@ def d2Omega(P = np.array,l = float ,k = float, deg = int):
         return 0
     else:
         return 2
+
+## Polynômes de Tchebychev
+Tcheb_pol = {}
+dico_pass_mat = {}
+
+def give_pol_T(n = int):
+    """renvoie le n-ème polynômes de Tchebychev"""
+    if n == 0 :
+        T0 = np.ndarray.flatten(np.full((1,1), 1)) 
+        return T0
+    elif n == 1 :
+        T1 = np.ndarray.flatten(np.full((1,2), 0))
+        T1[1] = 1
+        return T1
     
+    elif n in Tcheb_pol :
+        return Tcheb_pol[n]
+    else :
+        Tcheb_pol[n] =  poladd(polprod([0, 2] , give_pol_T(n-1)), polprod([-1] , give_pol_T(n-2)))
+        return Tcheb_pol[n]
+
+def PassMmat(n = int):
+    """initialise le matrice de passage de taille 2n+1x2n+1 des polynômes de Tchebychev aux monomes, où n est le degré maximum des polynômes de Tchebychev"""
+    if ("Tcheb to Mono",n) in dico_pass_mat:
+        return dico_pass_mat[("Tcheb to Mono",n)]
+    else :
+        P = np.zeros((2*n+2,2*n+2))
+        for j in range(n+1):
+            Tj = polcomp(give_pol_T(j), [-1,2])
+            m = len(Tj)
+            for i in range(m):
+                P[2*i][2*j]   = Tj[i]   # partie réelle
+                P[2*i+1][2*j+1] = Tj[i]   # partie imaginaire
+        dico_pass_mat[("Tcheb to Mono",n)] = P
+        return P
+
+def PassTmat(n = int):
+    """initialise le matrice de passage de taille 2*n+1x2*n+1 des monomes aux polynômes de Tchebychev, où n est le degré maximum des monomes """
+    if ("Mono to Tcheb",n) in dico_pass_mat:
+        return dico_pass_mat[("Mono to Tcheb",n)]
+    else : 
+        P =np.linalg.inv(PassMmat(n))
+        dico_pass_mat[("Mono to Tcheb",n)] = P
+        return P
+    
+
 ## Matrices et fonction Lagrangienne
 
 def Lagrangien(P = np.array ,lambda1 = float ,lambda2 = float, deg = int):
@@ -256,8 +317,8 @@ def Jacob(P = np.array,lambda1=float,lambda2=float, deg = int):
 
     Jacobienne = np.zeros((2*deg,2*deg))
 
-    for i in range(4,2*deg):
-        for j in range(4,2*deg):
+    for i in range(4,2*deg+2):
+        for j in range(4,2*deg+2):
             Jacobienne[i-4][j-4] = d2Phi(P,i,j,deg) - lambda1*d2Psi(P,i,j,deg) - lambda2*d2Omega(P,i,j,deg)
     
     for i in range(2*deg):
@@ -277,15 +338,19 @@ mu =10**(-3)
 def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ,deg = int):
     X = np.zeros((2*deg,1))
     for i in range(deg-1):
-        X[2*i][0]= (P0[i+2]).real
+        X[2*i][0]= (P0[i+2]).real #erreur
         X[2*i+1][0]= (P0[i+2]).imag
     X[2*deg-2][0] = lambda1
     X[2*deg-1][0] = lambda2
 
+    PassTM = PassMmat(deg)[4:, 4:] #suppression des monomes de puissance 0 et 1 comme dans le reste du code
+    PassMT = PassTmat(deg)[4:, 4:]
+    X[:2*deg-2] = matprod(PassMT,X[:2*deg-2])
     global mu
 
     for i in range(it):
-        J =Jacob(P0,lambda1,lambda2,deg)
+        J = Jacob(P0,lambda1,lambda2,deg)
+        J[:, :2*deg -2] = matprod(J[:, :2*deg -2],PassTM)
         Jt = np.transpose(J)
         L = scal(-1,Lagrangien(P0,lambda1,lambda2,deg))
 
@@ -305,8 +370,9 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ,de
         #print("mu",mu)
         #print(deltaX)
 
+        a = matprod(PassTM, X[:2*deg-2])
         for i in range(deg-1):
-            P0[i+2] = complex(X[2*i][0] , X[2*i+1][0])
+            P0[i+2] = complex(a[2*i],a[2*i+1])
         P0[0]= complex(0,0)
         P0[1]= complex(0,0)
         lambda1 = X[2*deg-2][0]
@@ -347,10 +413,11 @@ def cv_continue(P0 = np.array, lambda1 = float, lambda2 = float , deg_max = int,
     for i in range(deg, deg_max):
         deg = i
         print(f"\n \n Degré des polynômes étudiés : {deg}\n")
-        reg = 10
+        reg = 10/(np.sqrt(i+1))
         (P0, lambda1, lambda2) = cv_reg(P0, lambda1, lambda2,deg)
         
         P0.append(complex(0,0))
+        P0 = poladd(P0, polprod([reg/1000],give_pol_T(i+1)))
 
     deg = original_deg
     return (P0, lambda1, lambda2)
@@ -380,4 +447,5 @@ def T(X,deg = int):
     Lt = np.transpose(Lagrangien(P, lambda1 , lambda2, deg))
     
     return scal(1/2,matprod(Lt,L)) 
+
 
