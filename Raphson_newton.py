@@ -100,9 +100,15 @@ def module(z):
     """renvoie le module de z"""
     return np.abs(z)
 
+integ_mem ={}
+
 def integ(f,a=float,b=float):
     """réalise l'intégrale de f sur a,b avec la méthode de simpson, par défaut it (="itération")=1000"""
-    return integrate.quad(lambda x:f(x), a, b)[0]
+    if (f,a,b) in integ_mem :
+        return integ_mem[f,a,b]
+    else :
+        integ_mem[f,a,b] = integrate.quad(lambda x:f(x), a, b)[0]
+        return integ_mem[f,a,b]
     
 ### Fonctions du problème
 
@@ -110,20 +116,33 @@ longueur_du_parcours = 20 # Longueur du parcours étudié
 reg = 3 #correction pour assurer que Phi soit coercif
 
 ## à Optimiser
+Pol_fun_mem = {}
 
 def Phi(P = np.array, deg = int):
     """fonctions rayon moyen"""
     def A(x):
-        F=fun_p(P)
-        d2F = fun_p(dp(dp(P)))
+        if tuple(P) in Pol_fun_mem : 
+            F = Pol_fun_mem[tuple(P)][0]
+            d2F = Pol_fun_mem[tuple(P)][2]
+        else :
+            Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+            F = Pol_fun_mem[tuple(P)][0]
+            d2F = Pol_fun_mem[tuple(P)][2]
+
         return module(F(x)) + reg*(module(d2F(x)))**2
     
     return integ(A,0,1)
 
 def dPhi(P = np.array, k=float, deg = int):
     """renvoie la différentiel selon e_k de Phi de P"""
-    p = fun_p(P)
-    d2p =fun_p(dp(dp(P)))
+    if tuple(P) in Pol_fun_mem : 
+            p = Pol_fun_mem[tuple(P)][0]
+            d2p = Pol_fun_mem[tuple(P)][2]
+    else :
+        Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+        p = Pol_fun_mem[tuple(P)][0]
+        d2p = Pol_fun_mem[tuple(P)][2]
+
     if k> 2*deg+1 or k<0:
         raise ValueError("indice k trop grand ou trop petit")
     
@@ -142,7 +161,12 @@ def dPhi(P = np.array, k=float, deg = int):
 
 def d2Phi(P = np.array,k=float,l=float, deg = int):
     """renvoie la différentiel selon e_k et e_l de Phi de P"""
-    p = fun_p(P) 
+    if tuple(P) in Pol_fun_mem : 
+        p = Pol_fun_mem[tuple(P)][0]
+    else :
+        Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+        p = Pol_fun_mem[tuple(P)][0]
+
     if (k> 2*deg +1 or k<0) or (l> 2*deg +1 or l<0) :
         raise ValueError("indice k ou l trop grand ou trop petit")
     
@@ -168,12 +192,20 @@ def d2Phi(P = np.array,k=float,l=float, deg = int):
 
 def Psi(P = np.array, deg = int):
     def A(x):
-        F = fun_p(dp(P))
+        if tuple(P) in Pol_fun_mem : 
+            F = Pol_fun_mem[tuple(P)][1]
+        else :
+            Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+            F = Pol_fun_mem[tuple(P)][1]
         return module(F(x))
     return integ(A,0,1)-longueur_du_parcours
 
 def dPsi(P = np.array,k=float, deg = int):
-    A = fun_p(dp(P)) 
+    if tuple(P) in Pol_fun_mem : 
+        A = Pol_fun_mem[tuple(P)][1]
+    else :
+        Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+        A = Pol_fun_mem[tuple(P)][1]
 
     if k > 2*deg+1 or k<0 :
         raise ValueError("indice k trop grand ou trop petit")
@@ -194,7 +226,11 @@ def dPsi(P = np.array,k=float, deg = int):
     return integ(F,0,1)
 
 def d2Psi(P = np.array,l=float,k=float, deg = int):
-    A = fun_p(dp(P))
+    if tuple(P) in Pol_fun_mem : 
+        A = Pol_fun_mem[tuple(P)][1]
+    else :
+        Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+        A = Pol_fun_mem[tuple(P)][1]
 
     if k>2*deg+1 or k<0 or  l>2*deg+1 or l<0:
         raise ValueError("indice k ou l trop grand ou trop petit")
@@ -225,12 +261,20 @@ def d2Psi(P = np.array,l=float,k=float, deg = int):
 #Contrainte de cyclicité 
 
 def Omega(P = np.array, deg = int):
-    p = fun_p(P)
+    if tuple(P) in Pol_fun_mem : 
+        p = Pol_fun_mem[tuple(P)][0]
+    else :
+        Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+        p = Pol_fun_mem[tuple(P)][0]
     return (module(p(1)-p(0)))**2
 
 def dOmega(P = np.array ,k = float, deg = int):
     """renvoie la différentiel selon e_k de Omega de P"""
-    p = fun_p(P)
+    if tuple(P) in Pol_fun_mem : 
+        p = Pol_fun_mem[tuple(P)][0]
+    else :
+        Pol_fun_mem[tuple(P)] = (fun_p(P),fun_p(dp(P)),fun_p(dp(dp(P))))
+        p = Pol_fun_mem[tuple(P)][0]
     if k > 2*deg+1 or k<0 :
         raise ValueError("k est plus gand ou plus petit que le degré des polynôme (variable deg)")
     
@@ -413,7 +457,7 @@ def cv_continue(P0 = np.array, lambda1 = float, lambda2 = float , deg_max = int,
     for i in range(deg, deg_max):
         deg = i
         print(f"\n \n Degré des polynômes étudiés : {deg}\n")
-        reg = 10/(np.sqrt(i+1))
+        reg = 5/(2**(i//10))
         (P0, lambda1, lambda2) = cv_reg(P0, lambda1, lambda2,deg)
         
         P0.append(complex(0,0))
@@ -435,17 +479,22 @@ def satis_facteur(P):
 ## Autre méthode : page 114 du livre springer, page 127 pour le pdf
 
 def T(X,deg = int):
-    (lambda2, lambda1) = (0,0)
+    (lambda1, lambda2) = (X[2*deg-2][0],X[2*deg-1][0])
     P = np.ndarray.flatten(np.full((1,deg+1), 0+0j)) 
 
+    a = matprod(PassMmat(deg)[4:, 4:], X[:2*deg-2])
     for i in range(deg-1):
-        P[i+2] = complex(X[2*i][0] , X[2*i+1][0])
-        lambda1 = X[2*deg-2][0]
-        lambda2 = X[2*deg-1][0]
+        P[i+2] = complex(a[2*i],a[2*i+1])
+    P[0]= complex(0,0)
+    P[1]= complex(0,0)
 
     L  = Lagrangien(P, lambda1 , lambda2,deg)
-    Lt = np.transpose(Lagrangien(P, lambda1 , lambda2, deg))
+    J = Jacob(P,lambda1,lambda2,deg)
+    J[:, :2*deg -2] = matprod(J[:, :2*deg -2],PassMmat(deg)[4:, 4:])
+
+    M = matprod(np.transpose(J),L)
+    Mt = np.transpose(M)
     
-    return scal(1/2,matprod(Lt,L)) 
+    return scal(1/2,matprod(Mt,M)) 
 
 
