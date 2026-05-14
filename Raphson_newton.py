@@ -398,19 +398,19 @@ def Raphson_Newton(P0 = np.array, lambda1 = float, lambda2 = float , it = 50 ,de
         Jt = np.transpose(J)
         L = scal(-1,Lagrangien(P0,lambda1,lambda2,deg))
 
-        B = matprod(Jt,L)
-        A = matprod(Jt,J) + mu*np.diag(np.diag(matprod(Jt, J)))
-        deltaX = np.linalg.solve(A,B)
+        #B = matprod(Jt,L)
+        #A = matprod(Jt,J) + mu*np.diag(np.diag(matprod(Jt, J)))
+        deltaX = np.linalg.solve(J,L)
 
            
-        if T(X+deltaX,deg)<T(X,deg):
-            mu = mu/(10)
-            X = X + deltaX
+        #if T(X+deltaX,deg)<T(X,deg):
+        #    mu = mu/(10)
+        #    X = X + deltaX
 
-        elif mu> 10**(300):
-            mu=10**(-100)
-            #print("mu devenu trop grand remise dans des limites raisonnable")
-        else : mu = mu*(10) 
+        #elif mu> 10**(300):
+        #    mu=10**(-100)
+
+        #else : mu = mu*(10) 
         #print("mu",mu)
         #print(deltaX)
 
@@ -460,7 +460,7 @@ def cv_continue(P0 = np.array, lambda1 = float, lambda2 = float , deg_max = int,
         reg = 5/(2**(i//10))
         (P0, lambda1, lambda2) = cv_reg(P0, lambda1, lambda2,deg)
         
-        P0.append(complex(0,0))
+        P0 = np.append(P0, complex(0,0))
         P0 = poladd(P0, polprod([reg/1000],give_pol_T(i+1)))
 
     deg = original_deg
